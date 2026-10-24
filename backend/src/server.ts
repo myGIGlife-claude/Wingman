@@ -32,7 +32,7 @@ app.get('/items', async req => {
   const dest = String((req.query as any).dest ?? '');
   if (!DESTS.some(d => d.id === dest)) return [];
   const y = (await getState()).yata?.stocks?.[dest]?.stocks ?? [];
-  return y.map((s: any) => ({ name: s.name, cost: s.cost }));
+  return y.map((s: any) => ({ name: s.name, cost: s.cost, qty: s.quantity }));
 });
 
 await app.listen({ port: Number(PORT), host: '0.0.0.0' });

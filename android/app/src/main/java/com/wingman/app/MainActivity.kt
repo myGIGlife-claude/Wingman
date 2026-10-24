@@ -29,7 +29,7 @@ class MainActivity : Activity() {
     private val dim = Color.parseColor("#908975")
 
     private lateinit var url: EditText; private lateinit var secret: EditText
-    private lateinit var dest: Picker; private lateinit var item: AutoCompleteTextView; private lateinit var method: Picker
+    private lateinit var dest: Picker; private lateinit var item: Picker; private lateinit var method: Picker
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText
     private lateinit var xanax: CheckBox; private lateinit var status: TextView
 
@@ -45,17 +45,20 @@ class MainActivity : Activity() {
         setOnClickListener { click() }
     }
     // Button that opens a plain dialog list; avoids Spinner theming problems.
-    inner class Picker(private val list: List<Pair<String, String>>) : Button(this@MainActivity) {
+    inner class Picker(private var list: List<Pair<String, String>>) : Button(this@MainActivity) {
         var index = 0
             private set
+        var onPick: (() -> Unit)? = null
+        val key get() = list.getOrNull(index)?.first ?: ""
+        fun setList(l: List<Pair<String, String>>, selectKey: String) { list = l; set(l.indexOfFirst { it.first == selectKey }.coerceAtLeast(0)) }
         init {
             typeface = Typeface.MONOSPACE; setTextColor(paper); isAllCaps = false; gravity = Gravity.START or Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.btn_ghost); set(0)
             setOnClickListener {
-                AlertDialog.Builder(this@MainActivity).setItems(list.map { it.second }.toTypedArray()) { _, i -> set(i) }.show()
+                AlertDialog.Builder(this@MainActivity).setItems(list.map { it.second }.toTypedArray()) { _, i -> set(i); onPick?.invoke() }.show()
             }
         }
-        fun set(i: Int) { index = i; text = list[i].second + "  ▾" }
+        fun set(i: Int) { index = i; text = (list.getOrNull(i)?.second ?: "No stock data yet") + "  ▾" }
     }
 
     override fun onCreate(b: Bundle?) {
@@ -72,7 +75,7 @@ class MainActivity : Activity() {
         col.addView(button("Connect and load", true) { connect() })
 
         dest = Picker(dests); method = Picker(methods)
-        item = AutoCompleteTextView(this).apply { hint = "e.g. Xanax"; setTextColor(paper); setHintTextColor(dim); typeface = Typeface.MONOSPACE; setSingleLine(); threshold = 1 }
+        item = Picker(emptyList()); dest.onPick = { bg { loadItems("") } }
         shop = field("3", true); safety = field("10", true); cap = field("29", true)
         xanax = CheckBox(this).apply { text = "Xanax step when drug cooldown is up"; setTextColor(paper); typeface = Typeface.MONOSPACE; isChecked = true }
         col.addView(label("Destination")); col.addView(dest)
@@ -110,26 +113,31 @@ class MainActivity : Activity() {
         runOnUiThread {
             dest.set(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
             method.set(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
-            item.setText(j.optString("item")); shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
+            shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
             cap.setText(j.optInt("capacity", 29).toString()); xanax.isChecked = j.optBoolean("xanax", true)
         }
-        loadItems(); Api.refresh(this); say("Connected.")
+        loadItems(j.optString("item")); Api.refresh(this); say("Connected.")
     }
 
-    private fun loadItems() {
+    // Items sold in the chosen country with stock and price (YATA, player-reported).
+    private fun loadItems(want: String) {
         val d = dests[dest.index].first
         val r = Api.call(this, "GET", "/items?dest=$d") ?: return
-        val names = JSONArray(r).let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("name") } }
-        runOnUiThread { item.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, names)) }
+        val a = JSONArray(r)
+        val rows = (0 until a.length()).map { a.getJSONObject(it) }.map {
+            val n = it.getString("name"); val c = it.optLong("cost"); val q = it.optInt("qty", -1)
+            n to "$n · ${if (q >= 0) "$q in stock" else "stock ?"} · $" + "%,d".format(c)
+        }
+        runOnUiThread { item.setList(if (rows.isEmpty() && want.isNotEmpty()) listOf(want to want) else rows, want) }
     }
 
     private fun save() = bg {
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
-            .put("item", item.text.toString().trim()).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
+            .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
             .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29)
             .put("xanax", xanax.isChecked)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
-        Api.refresh(this); loadItems()
+        Api.refresh(this)
     }
 
     private fun localTest() {
