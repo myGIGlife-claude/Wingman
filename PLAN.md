@@ -9,7 +9,7 @@ infra: secrets (blocked by classifier, ask Jonathan), Firebase, deploy.
 ## Tasks
 - [x] Backend: plan.ts + tests (11 pass)
 - [x] Backend: clients, model, events, tick, routes, Dockerfile (tsc + 15 tests pass; not run live)
-- [ ] Userscript v1.1 (buy max prefill, live stock, capacity, shared settings)
+- [x] Userscript v1.1 written (syntax-checked only; shop-page selectors unverified)
 - [ ] Android app (widget, FCM, settings, CI workflow)
 - [ ] infra/setup.sh (needs Jonathan: billing link, role grants)
 - [ ] README (phone-friendly setup)

@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Wingman
 // @namespace    ocrp.torn
-// @version      1.0.0
+// @version      1.1.0
 // @description  Torn PDA helper: OC countdown, "does a trip fit before my OC?" check, foreign stock watch with restock alarm, and a home checklist (Xanax, gym, crimes). Reads the API only. Every game action stays your tap.
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
 // @connect      api.torn.com
 // @connect      yata.yt
+// @connect      *.run.app
 // @run-at       document-end
 // ==/UserScript==
 
@@ -59,7 +60,7 @@
 
   const DEFAULTS = {
     dest: 'mex', item: '', method: 'standard',
-    shopMin: 3, safetyMin: 10, poll: 60,
+    shopMin: 3, safetyMin: 10, capacity: 29, backend: '', secret: '', poll: 60,
     xanax: true, sound: true, side: 'left', key: '',
   };
 
@@ -262,7 +263,7 @@
     S.polling = true;
     try {
       const [u, oc] = await Promise.all([
-        getJSON(`https://api.torn.com/user/?selections=basic,bars,cooldowns,travel,timestamp&key=${key}&comment=${COMMENT}`),
+        getJSON(`https://api.torn.com/user/?selections=basic,bars,cooldowns,travel,money,timestamp&key=${key}&comment=${COMMENT}`),
         getJSON(`https://api.torn.com/v2/user/organizedcrime?key=${key}&comment=${COMMENT}`)
           .catch(e => ({ error: { error: String(e && e.message || e) } })),
       ]);
@@ -650,6 +651,9 @@
       + `<label>Flight type<select name="method">${opts(Object.entries(METHODS).map(([k, m]) => [k, m.label]), c.method)}</select></label>`
       + `<div class="ocrp-row2"><label>Shopping time (min)<input name="shopMin" type="number" inputmode="numeric" min="0" max="60" value="${c.shopMin}"></label>`
       + `<label>Safety buffer (min)<input name="safetyMin" type="number" inputmode="numeric" min="0" max="120" value="${c.safetyMin}"></label></div>`
+      + `<label>Items you can carry<input name="capacity" type="number" inputmode="numeric" min="1" max="200" value="${c.capacity}"></label>`
+      + `<label>Wingman backend URL (optional)<input name="backend" value="${esc(c.backend)}" placeholder="https://…run.app" autocomplete="off"></label>`
+      + `<label>Wingman app secret (optional)<input name="secret" type="password" value="${esc(c.secret)}" autocomplete="off"></label>`
       + `<div class="ocrp-row2"><label>Check Torn every (sec)<input name="poll" type="number" inputmode="numeric" min="30" max="600" value="${c.poll}"></label>`
       + `<label>Panel side<select name="side">${opts([['left', 'Left'], ['right', 'Right']], c.side)}</select></label></div>`
       + `<label class="ocrp-chk"><input type="checkbox" name="xanax"${c.xanax ? ' checked' : ''}> Xanax step when drug cooldown is up</label>`
@@ -674,13 +678,70 @@
     c.method = v('method').value;
     c.shopMin = clamp(v('shopMin').value, 0, 60, DEFAULTS.shopMin);
     c.safetyMin = clamp(v('safetyMin').value, 0, 120, DEFAULTS.safetyMin);
+    c.capacity = clamp(v('capacity').value, 1, 200, DEFAULTS.capacity);
+    c.backend = v('backend').value.trim().replace(/\/+$/, '');
+    c.secret = v('secret').value.trim();
     c.poll = clamp(v('poll').value, 30, 600, DEFAULTS.poll);
     c.side = v('side').value;
     c.xanax = v('xanax').checked;
     c.sound = v('sound').checked;
     if (v('key')) c.key = v('key').value.trim();
     save('cfg', c);
+    syncBackend('PUT', '/settings', { dest: c.dest, item: c.item, method: c.method, shopMin: c.shopMin, safetyMin: c.safetyMin, capacity: c.capacity, xanax: c.xanax });
     if (!S.user && apiKey()) pollTorn();
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* optional Wingman backend sync (our own server, never torn.com)      */
+  /* ------------------------------------------------------------------ */
+
+  function syncBackend(method, path, body) {
+    const c = S.cfg;
+    if (!c.backend || !c.secret || typeof GM_xmlhttpRequest !== 'function') return Promise.resolve(null);
+    return new Promise(res => GM_xmlhttpRequest({
+      method, url: c.backend + path, timeout: 15000, data: body ? JSON.stringify(body) : undefined,
+      headers: { 'X-Wingman-Key': c.secret, 'Content-Type': 'application/json' },
+      onload: r => { try { res(JSON.parse(r.responseText)); } catch (e) { res(null); } },
+      onerror: () => res(null), ontimeout: () => res(null),
+    }));
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* buy-max pre-fill: sets the quantity box only. The player taps Buy.  */
+  /* ------------------------------------------------------------------ */
+
+  function prefillBuyMax() {
+    document.querySelectorAll('.ocrp-tag').forEach(e => e.remove());
+    const p = S.plan, c = S.cfg;
+    if (!p || p.phase !== 'abroad' || S.mem.bought || !c.item || !S.user) return;
+    for (const row of document.querySelectorAll('.ocrp-hl')) {
+      let box = row, input = null;
+      for (let i = 0; i < 3 && box && !input && (box.textContent || '').length < 600; i++, box = box.parentElement) {
+        input = box.querySelector('input[type="text"],input[type="number"],input[type="tel"],input:not([type])');
+      }
+      if (!input || input.closest('#ocrp-root')) continue;
+      const txt = (box || row).textContent || '';
+      const m = txt.match(/(\d[\d,]*)\s*in stock/i) || txt.match(/stock[:\s]*(\d[\d,]*)/i); // shown on the page you are viewing
+      const mc = txt.match(/\$\s?(\d[\d,]*)/);
+      const num = x => Number(String(x).replace(/,/g, ''));
+      const qty = m ? num(m[1]) : (p.stock && !p.stock.missing ? p.stock.qty : null);
+      const cost = mc ? num(mc[1]) : (p.stock && !p.stock.missing ? p.stock.cost : 0);
+      if (qty == null) continue;
+      const cash = Number(S.user.money_onhand) || 0;
+      const n = Math.max(0, Math.min(c.capacity, cost > 0 ? Math.floor(cash / cost) : c.capacity, qty));
+      if (n > 0 && input.dataset.ocrpSet !== String(n)) {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+        setter.call(input, String(n)); // native setter so React sees the change
+        input.dataset.ocrpSet = String(n);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      const tag = document.createElement('span');
+      tag.className = 'ocrp-tag';
+      tag.textContent = n > 0 ? `MAX ${n} — tap Buy` : (qty === 0 ? 'SOLD OUT' : 'NOT ENOUGH CASH');
+      input.insertAdjacentElement('afterend', tag);
+      break;
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -724,6 +785,7 @@
       }
     }
     S.firstHL = first;
+    prefillBuyMax();
     const key = location.href + '|' + list.map(String).join(',');
     if (first && !S.scrolled[key]) {
       S.scrolled[key] = true;
@@ -758,8 +820,8 @@
     else if (act === 'cancel') { S.settings = false; }
     else if (act === 'save') { saveSettings(); S.settings = false; }
     else if (act === 'forget') { S.learned = {}; save('learned', {}); renderSettings(); }
-    else if (act === 'bought') { S.mem.bought = true; save('mem', S.mem); }
-    else if (act === 'unbought') { S.mem.bought = false; save('mem', S.mem); }
+    else if (act === 'bought') { S.mem.bought = true; save('mem', S.mem); syncBackend('POST', '/bought'); }
+    else if (act === 'unbought') { S.mem.bought = false; save('mem', S.mem); syncBackend('POST', '/unbought'); }
     else if (act === 'dismiss') { S.banner = null; }
     else if (act === 'jump') {
       applyHighlights();
@@ -862,6 +924,7 @@ position:fixed;left:10px;bottom:64px;z-index:2147483000;font:12.5px/1.4 ui-monos
 #ocrp-root .ocrp-dim{margin:0;font-size:11px;color:var(--dim)}
 #ocrp-root .ocrp-link{padding:0;color:var(--amber);text-decoration:underline}
 @keyframes ocrp-blink{50%{background:var(--stop)}}
+.ocrp-tag{margin-left:6px;padding:1px 6px;background:#ffb627;color:#0e0e0c;font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.06em;border-radius:3px}
 .ocrp-hl{outline:2px solid #ffb627 !important;outline-offset:2px !important;border-radius:3px;animation:ocrp-pulse 1.4s ease-in-out infinite}
 @keyframes ocrp-pulse{0%,100%{box-shadow:0 0 0 4px rgba(255,182,39,.28)}50%{box-shadow:0 0 0 10px rgba(255,182,39,.05)}}
 `;
