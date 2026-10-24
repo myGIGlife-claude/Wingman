@@ -21,5 +21,7 @@ Android app (widget, FCM, settings, CI).
 
 - 2026-10-24: Widget is tile-based and customizable (v1.2.0): backend sends `facts`, app composes tiles from Prefs layout.
 
+- 2026-10-24: Figma designs for widget states and app screens: https://www.figma.com/design/FmUYycRA0WJanbNAgYNtxB (Wingman UI). Next: apply the look in code.
+
 ## Known issues
 - Need from Jonathan: link billing to `wingman-oc` in console; Torn API key (Limited) via cLaudeRC. Region assumed us-east1.
