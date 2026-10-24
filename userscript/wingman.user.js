@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         OC Run Planner
+// @name         Wingman
 // @namespace    ocrp.torn
 // @version      1.0.0
 // @description  Torn PDA helper: OC countdown, "does a trip fit before my OC?" check, foreign stock watch with restock alarm, and a home checklist (Xanax, gym, crimes). Reads the API only. Every game action stays your tap.

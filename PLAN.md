@@ -1,7 +1,7 @@
 Last updated: 2026-10-24 00:20 UTC
 
 ## Goal
-Torn OC Run: GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/torn-oc-run-build-spec.md`. Hard rule: API-only, never automate game actions.
+Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/torn-oc-run-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
 Backend: torn/yata clients, widget model, events, tick, routes.
