@@ -244,7 +244,7 @@ class WingmanWidget : AppWidgetProvider() {
                     val lb = f.optLong("leaveBy", 0)
                     add(panel(c, Panel(if (out) "LANDS IN ${where.uppercase()}" else "LANDS HOME", if (land > 0) "at ${Tiles.clock(land)}" else null, "amber",
                         Cell("LANDS", land.takeIf { it > 0 }, "amber", sub = if (land > 0) Tiles.clock(land) else ""), if ("oc" in ids) ocCell(f, now) else null,
-                        slackLabel = if (pct >= 0) (if (out) "TORN" else where.uppercase()) else null, slackValue = if (out) where.uppercase() else "TORN", slackPct = pct,
+                        slackLabel = if (pct >= 0) f.optString("origin").takeIf { it.isNotEmpty() && it != "null" }?.uppercase() ?: if (out) "TORN" else "ABROAD" else null, slackValue = if (out) where.uppercase() else "TORN", slackPct = pct,
                         note = if (out && f.optString("item").isNotEmpty()) "Then: buy ${f.optString("item")}." + (if (lb > 0) " Must leave $where by ${Tiles.clock(lb)}." else "") else null), now))
                     add(row(c, 8, listOf(wbtn(c, "IN FLIGHT", "fly", "ghost", broadcast(c, ActionReceiver.ACTION_REFRESH, 0)), refresh)))
                 }

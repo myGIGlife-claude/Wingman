@@ -12,7 +12,7 @@ export interface Widget {
 
 // Raw numbers for the widget tiles. All times are epoch seconds so the phone can run its own countdowns.
 export interface Facts {
-  phase: string; name: string | null; faction: string | null; life: Bar | null; hospitalUntil: number | null; jailUntil: number | null;
+  phase: string; origin: string | null; name: string | null; faction: string | null; life: Bar | null; hospitalUntil: number | null; jailUntil: number | null;
   flyOkUntil: number | null; flyBufferSecs: number; ocName: string | null; ocStatus: string | null; ocReadyAt: number | null; ocNow: boolean;
   energy: Bar | null; nerve: Bar | null; cooldowns: { drug: number | null; booster: number | null; medical: number | null };
   cash: number | null; landAt: number | null; departedAt: number | null; outbound: boolean | null; where: string | null; leaveBy: number | null; flyBy: number | null;
@@ -35,7 +35,7 @@ export function buyLabel(p: any): string {
   return b?.why === 'cash' ? 'NOT ENOUGH CASH' : `BUY MAX (${b?.n ?? 0})`;
 }
 
-export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta): Facts {
+export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, origin?: string | null): Facts {
   const t: number = p.t;
   const bar = (b: any): Bar | null => b && b.maximum ? { cur: b.current, max: b.maximum, fullAt: b.fulltime ? t + b.fulltime : null } : null;
   const cd = (s: unknown) => (typeof s === 'number' && s > 0 ? t + s : null);
@@ -46,7 +46,7 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta):
     return v;
   };
   return {
-    phase: p.phase, name: user?.name ?? null, faction: user?.faction?.faction_name || null, life: bar(user?.life),
+    phase: p.phase, origin: origin ?? null, name: user?.name ?? null, faction: user?.faction?.faction_name || null, life: bar(user?.life),
     hospitalUntil: until(user?.states?.hospital_timestamp, 'Hospital'), jailUntil: until(user?.states?.jail_timestamp, 'Jail'),
     flyOkUntil: p.flyOkUntil ?? null, flyBufferSecs: (cfg.flyBufferMin ?? 90) * 60, ocName: p.oc?.name ?? null, ocStatus: p.oc?.status ?? null, ocReadyAt: p.oc?.ready ?? null, ocNow: !!p.ocNow,
     energy: bar(user?.energy), nerve: bar(user?.nerve), cooldowns: { drug: cd(c.drug), booster: cd(c.booster), medical: cd(c.medical) },
@@ -60,7 +60,7 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta):
   };
 }
 
-export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any, rs?: Eta): Widget {
+export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any, rs?: Eta, origin?: string | null): Widget {
   const t: number = p.t, tz = cfg.tz;
   const w: Widget = { phase: p.phase, title: '', countdownTo: null, countdownLabel: '', sub: '', primary: { label: 'WAITING', url: null, style: 'ghost' }, showBought: false, updatedAt: t };
 
@@ -97,6 +97,6 @@ export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, 
       if (soonest) { w.countdownTo = soonest.at; w.countdownLabel = soonest.id.toUpperCase(); }
     }
   }
-  w.facts = factsOf(p, cfg, user, bought, rs);
+  w.facts = factsOf(p, cfg, user, bought, rs, origin);
   return w;
 }

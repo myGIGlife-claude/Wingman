@@ -72,7 +72,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   const sent = pruneSent(st.sent, wall, SENT_TTL);
   const events: Evt[] = diffEvents(prev, p, cfg, bought).filter(e => !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs);
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(model, events); } catch (e) {
@@ -91,7 +91,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, hist, snapshot: { user, oc },
+    landedCash: landedCash ?? null, bought, sent, model, hist, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null, snapshot: { user, oc },
   });
   return { ok: true, phase: p.phase };
 }
@@ -106,5 +106,5 @@ export async function currentModel(key: string, fresh = false): Promise<Widget> 
   }
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
-  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined);
+  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null);
 }

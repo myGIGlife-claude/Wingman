@@ -13,7 +13,7 @@ val AMBER = Color.parseColor("#FFB627")
 val GO = Color.parseColor("#B5E35C")
 val STOP = Color.parseColor("#FF5F3C")
 val PAPER = Color.parseColor("#EDE7D3")
-val DIM = Color.parseColor("#908975")
+val DIM = Color.parseColor("#B0A88F")
 val YELLOW = Color.parseColor("#FFD23F")
 
 class TileDef(val id: String, val title: String)
