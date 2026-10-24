@@ -32,7 +32,7 @@
 
   const PDA_KEY = '###PDA-APIKEY###'; // Torn PDA swaps this for your key. Keep it the only copy of that text in the file.
   const NS = 'ocrp:';
-  const COMMENT = 'OCRunPlanner';
+  const COMMENT = 'Wingman';
 
   // Standard one-way flight minutes. Other flight types scale from these, and the script
   // replaces them with your real measured time after your first flight to a place.

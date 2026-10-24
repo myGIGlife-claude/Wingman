@@ -1,5 +1,5 @@
 {
-  "name": "ocrun-backend",
+  "name": "wingman-backend",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },

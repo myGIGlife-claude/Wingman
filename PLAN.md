@@ -1,7 +1,7 @@
 Last updated: 2026-10-24 00:20 UTC
 
 ## Goal
-Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/torn-oc-run-build-spec.md`. Hard rule: API-only, never automate game actions.
+Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/wingman-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
 Backend: torn/yata clients, widget model, events, tick, routes.
@@ -18,4 +18,4 @@ Backend: torn/yata clients, widget model, events, tick, routes.
 - 2026-10-24: No workers attached, no gcloud/firebase CLI on server; building code myself. GCP work goes through the clauderc service account (cannot grant roles or link billing).
 
 ## Known issues
-- Need from Jonathan before infra: project ID (suggest torn-oc-run), region (us-east1), billing link, Torn API key (Limited).
+- Need from Jonathan before infra: project ID (suggest wingman), region (us-east1), billing link, Torn API key (Limited).
