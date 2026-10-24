@@ -13,7 +13,7 @@ Android app (widget, FCM, settings, CI).
 - [x] Android app builds locally (debug APK). CI workflow added; needs GOOGLE_SERVICES_JSON_B64 secret
 - [x] infra: backend deployed (Cloud Run wingman-backend, scheduler wingman-tick every min, secrets). Verified live: /tick 200, phase=home
 - [x] Firebase app registered (google-services.json kept local, gitignored)
-- [ ] README (phone-friendly setup)
+- [x] README
 
 ## Decisions
 - 2026-10-24: No workers attached, no gcloud/firebase CLI on server; building code myself. GCP work goes through the clauderc service account (cannot grant roles or link billing).
