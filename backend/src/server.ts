@@ -14,6 +14,7 @@ const same = (a: unknown, b: string) => {
 };
 
 const app = Fastify({ logger: true });
+app.addContentTypeParser('*', { parseAs: 'string' }, (_r, body, done) => { try { done(null, body ? JSON.parse(body as string) : {}); } catch { done(null, {}); } });
 app.addHook('onRequest', async (req, reply) => {
   const ok = req.url.startsWith('/tick') ? same(req.headers['x-tick-key'], TICK_SECRET) : same(req.headers['x-wingman-key'], APP_SECRET);
   if (!ok) return reply.code(401).send({ error: 'unauthorized' });

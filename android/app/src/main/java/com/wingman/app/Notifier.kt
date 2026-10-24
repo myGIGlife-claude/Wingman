@@ -30,9 +30,9 @@ object Notifier {
         if (Model.parse(Prefs.get(c, "model"))?.phase == "abroad") {
             val bought = PendingIntent.getBroadcast(c, 1, Intent(c, ActionReceiver::class.java).setAction(ActionReceiver.ACTION_BOUGHT),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            b.addAction(Notification.Action.Builder(null, "Bought ✓", bought).build())
+            b.addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(c, R.drawable.ic_launcher), "Bought ✓", bought).build())
         }
-        if (url != null) b.addAction(Notification.Action.Builder(null, "Open", openIntent(c, url, 2)).build())
+        if (url != null) b.addAction(Notification.Action.Builder(android.graphics.drawable.Icon.createWithResource(c, R.drawable.ic_launcher), "Open", openIntent(c, url, 2)).build())
         c.getSystemService(NotificationManager::class.java).notify(text.hashCode(), b.build())
     }
 }

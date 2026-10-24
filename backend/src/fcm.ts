@@ -17,6 +17,7 @@ export async function push(model: Widget, alerts: { text: string; url: string | 
   if (!msgs.length) return;
   const res = await getMessaging().sendEach(msgs);
   res.responses.forEach((r, i) => {
+    if (r.error) console.error('fcm send failed', r.error.code);
     if (r.error?.code === 'messaging/registration-token-not-registered') removeDevice((msgs[i] as any).token).catch(() => {});
   });
 }

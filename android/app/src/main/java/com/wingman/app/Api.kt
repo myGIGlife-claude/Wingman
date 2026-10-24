@@ -15,10 +15,11 @@ object Api {
             h.requestMethod = method
             h.connectTimeout = 15000; h.readTimeout = 25000
             h.setRequestProperty("X-Wingman-Key", key)
-            if (body != null) {
+            val payload = body ?: if (method == "POST" || method == "PUT") "{}" else null
+            if (payload != null) {
                 h.doOutput = true
                 h.setRequestProperty("Content-Type", "application/json")
-                h.outputStream.use { it.write(body.toByteArray()) }
+                h.outputStream.use { it.write(payload.toByteArray()) }
             }
             if (h.responseCode in 200..299) h.inputStream.bufferedReader().readText() else null
         } catch (e: Exception) { null }

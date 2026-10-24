@@ -2,6 +2,8 @@ package com.wingman.app
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
+import android.app.NotificationManager
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
@@ -27,7 +29,7 @@ class MainActivity : Activity() {
     private val dim = Color.parseColor("#908975")
 
     private lateinit var url: EditText; private lateinit var secret: EditText
-    private lateinit var dest: Spinner; private lateinit var item: AutoCompleteTextView; private lateinit var method: Spinner
+    private lateinit var dest: Picker; private lateinit var item: AutoCompleteTextView; private lateinit var method: Picker
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText
     private lateinit var xanax: CheckBox; private lateinit var status: TextView
 
@@ -42,18 +44,18 @@ class MainActivity : Activity() {
         setBackgroundResource(if (primary) R.drawable.btn_amber else R.drawable.btn_ghost_amber)
         setOnClickListener { click() }
     }
-    private fun spinner(list: List<Pair<String, String>>) = Spinner(this).apply {
-        val names = list.map { it.second }
-        fun row(text: String) = TextView(this@MainActivity).apply {
-            this.text = text; setTextColor(paper); typeface = Typeface.MONOSPACE; textSize = 16f; setPadding(24, 28, 24, 28)
+    // Button that opens a plain dialog list; avoids Spinner theming problems.
+    inner class Picker(private val list: List<Pair<String, String>>) : Button(this@MainActivity) {
+        var index = 0
+            private set
+        init {
+            typeface = Typeface.MONOSPACE; setTextColor(paper); isAllCaps = false; gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setBackgroundResource(R.drawable.btn_ghost); set(0)
+            setOnClickListener {
+                AlertDialog.Builder(this@MainActivity).setItems(list.map { it.second }.toTypedArray()) { _, i -> set(i) }.show()
+            }
         }
-        adapter = object : BaseAdapter() {
-            override fun getCount() = names.size
-            override fun getItem(p: Int) = names[p]
-            override fun getItemId(p: Int) = p.toLong()
-            override fun getView(p: Int, v: View?, g: android.view.ViewGroup) = row(names[p])
-        }
-        setPopupBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.parseColor("#1E1D16")))
+        fun set(i: Int) { index = i; text = list[i].second + "  ▾" }
     }
 
     override fun onCreate(b: Bundle?) {
@@ -61,6 +63,7 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 80, 40, 80) }
         col.addView(TextView(this).apply { text = "WINGMAN"; setTextColor(amber); textSize = 26f; typeface = Typeface.MONOSPACE; letterSpacing = 0.2f })
+        col.addView(TextView(this).apply { text = "v" + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"; setTextColor(amber); textSize = 12f; typeface = Typeface.MONOSPACE })
         col.addView(TextView(this).apply { text = "Read-only Torn helper. You tap every action. Foreign stock data: YATA."; setTextColor(dim); textSize = 12f; typeface = Typeface.MONOSPACE })
 
         url = field("https://…run.app"); secret = field("app secret"); secret.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
@@ -68,7 +71,7 @@ class MainActivity : Activity() {
         col.addView(label("Backend URL")); col.addView(url); col.addView(label("App secret")); col.addView(secret)
         col.addView(button("Connect and load", true) { connect() })
 
-        dest = spinner(dests); method = spinner(methods)
+        dest = Picker(dests); method = Picker(methods)
         item = AutoCompleteTextView(this).apply { hint = "e.g. Xanax"; setTextColor(paper); setHintTextColor(dim); typeface = Typeface.MONOSPACE; setSingleLine(); threshold = 1 }
         shop = field("3", true); safety = field("10", true); cap = field("29", true)
         xanax = CheckBox(this).apply { text = "Xanax step when drug cooldown is up"; setTextColor(paper); typeface = Typeface.MONOSPACE; isChecked = true }
@@ -80,7 +83,8 @@ class MainActivity : Activity() {
         col.addView(label("Items you can carry")); col.addView(cap)
         col.addView(xanax)
         col.addView(button("Save settings", true) { save() })
-        col.addView(button("Send test notification", false) { bg { Api.call(this, "POST", "/test") } })
+        col.addView(button("Test notification (this phone)", false) { localTest() })
+        col.addView(button("Test push from backend", false) { say("Push requested. Wait a few seconds."); bg { Api.call(this, "POST", "/test") } })
         col.addView(button("Battery: set Unrestricted", false) { batteryHelp() })
         status = TextView(this).apply { setTextColor(dim); typeface = Typeface.MONOSPACE; textSize = 12f; setPadding(0, 24, 0, 0); gravity = Gravity.START }
         col.addView(status)
@@ -104,8 +108,8 @@ class MainActivity : Activity() {
         val s = Api.call(this, "GET", "/settings") ?: return@bg say("Could not reach backend. Check URL and secret.")
         val j = JSONObject(s)
         runOnUiThread {
-            dest.setSelection(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
-            method.setSelection(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
+            dest.set(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
+            method.set(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
             item.setText(j.optString("item")); shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
             cap.setText(j.optInt("capacity", 29).toString()); xanax.isChecked = j.optBoolean("xanax", true)
         }
@@ -113,19 +117,25 @@ class MainActivity : Activity() {
     }
 
     private fun loadItems() {
-        val d = dests[dest.selectedItemPosition].first
+        val d = dests[dest.index].first
         val r = Api.call(this, "GET", "/items?dest=$d") ?: return
         val names = JSONArray(r).let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("name") } }
         runOnUiThread { item.setAdapter(ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, names)) }
     }
 
     private fun save() = bg {
-        val j = JSONObject().put("dest", dests[dest.selectedItemPosition].first).put("method", methods[method.selectedItemPosition].first)
+        val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.text.toString().trim()).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
             .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29)
             .put("xanax", xanax.isChecked)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
         Api.refresh(this); loadItems()
+    }
+
+    private fun localTest() {
+        val on = getSystemService(NotificationManager::class.java).areNotificationsEnabled()
+        if (!on) { say("Notifications are BLOCKED for Wingman. Turn them on in Android settings."); startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)); return }
+        try { Notifier.alert(this, "Wingman local test", "https://www.torn.com/"); say("Local notification sent.") } catch (e: Throwable) { say("Notify error: $e") }
     }
 
     private fun batteryHelp() {

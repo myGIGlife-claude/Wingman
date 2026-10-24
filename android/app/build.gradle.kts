@@ -6,12 +6,13 @@ plugins {
 android {
     namespace = "com.wingman.app"
     compileSdk = 37
+    buildFeatures { buildConfig = true }
     defaultConfig {
         applicationId = "com.wingman.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = (System.getenv("WINGMAN_VERSION_CODE") ?: "1").toInt()
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
     }
 }
 
