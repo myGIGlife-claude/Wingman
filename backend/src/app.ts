@@ -23,7 +23,7 @@ export function buildApp(S: { tornKey: string; appSecret: string; tickSecret: st
 
   app.post('/tick', async () => tick(TORN_API_KEY));
   app.post('/register', async req => { const b: any = req.body; await addDevice(String(b.fcmToken), String(b.platform ?? 'android')); return { ok: true }; });
-  app.get('/state', async () => currentModel(TORN_API_KEY));
+  app.get('/state', async req => currentModel(TORN_API_KEY, (req.query as any).fresh === '1'));
   app.get('/settings', async () => getSettings());
   app.put('/settings', async req => { await putSettings(req.body as any); return getSettings(); });
   app.post('/bought', async () => { await setBought(true); return { ok: true }; });

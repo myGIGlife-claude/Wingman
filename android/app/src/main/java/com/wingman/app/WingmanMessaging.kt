@@ -5,7 +5,7 @@ import com.google.firebase.messaging.RemoteMessage
 
 class WingmanMessaging : FirebaseMessagingService() {
     override fun onMessageReceived(m: RemoteMessage) {
-        m.data["model"]?.let { if (Model.parse(it) != null) { Prefs.put(this, "model", it); WingmanWidget.updateAll(this) } }
+        m.data["model"]?.let { if (Model.parse(it) != null) { Prefs.put(this, "model", it); Prefs.put(this, "model_at", (System.currentTimeMillis() / 1000).toString()); WingmanWidget.updateAll(this) } }
         m.data["alert"]?.let { Notifier.alert(this, it, m.data["url"]?.ifEmpty { null }) }
     }
 

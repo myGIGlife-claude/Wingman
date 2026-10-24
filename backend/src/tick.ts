@@ -3,7 +3,7 @@ import { fetchUser, fetchOC, isKeyProblem, isRateLimit } from './torn.ts';
 import { fetchYata, findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
 import { diffEvents, type Evt } from './events.ts';
-import { getSettings, getState, saveState } from './store.ts';
+import { getSettings, getState, saveState, setYata } from './store.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent } from './logic.ts';
 import { observe, estimate } from './restock.ts';
@@ -97,9 +97,13 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
 }
 
 // Fresh widget model without side effects (GET /state).
-export async function currentModel(key: string): Promise<Widget> {
+export async function currentModel(key: string, fresh = false): Promise<Widget> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
   const [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
+  // A manual refresh pulls new stock too, but at most every 20 seconds so taps cannot hammer YATA.
+  if (fresh && (!st.yata || user.timestamp - st.yata.fetchedAt >= 20)) {
+    try { st.yata = await fetchYata(user.timestamp); await setYata(st.yata); } catch { /* keep the cached copy */ }
+  }
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined);

@@ -14,6 +14,7 @@ export async function putSettings(s: unknown) {
 }
 export const getState = async (): Promise<any> => (await stateDoc().get()).data() ?? {};
 export const saveState = (s: any) => stateDoc().set(s);
+export const setYata = (yata: unknown) => stateDoc().set({ yata }, { merge: true });
 export const setBought = (bought: boolean) => stateDoc().set({ bought }, { merge: true });
 
 export async function addDevice(token: string, platform: string) {

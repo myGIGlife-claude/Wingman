@@ -9,10 +9,13 @@ class ActionReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         if (i.action == ACTION_RENDER) { WingmanWidget.updateAll(c); return }
         val pending = goAsync()
+        val ui = android.os.Handler(android.os.Looper.getMainLooper())
+        val say = { t: String -> ui.post { android.widget.Toast.makeText(c, t, android.widget.Toast.LENGTH_SHORT).show() } }
+        say(if (i.action == ACTION_BOUGHT) "Marking bought…" else "Refreshing…")
         Thread {
             try {
                 if (i.action == ACTION_BOUGHT) Api.call(c, "POST", "/bought")
-                Api.refresh(c)
+                say(if (Api.refresh(c, fresh = true)) "Updated" else "Could not reach Wingman")
             } finally { pending.finish() }
         }.start()
     }

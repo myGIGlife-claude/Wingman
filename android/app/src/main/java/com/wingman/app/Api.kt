@@ -25,10 +25,12 @@ object Api {
         } catch (e: Exception) { null }
     }
 
-    // Fetch the model, store it and redraw the widget.
-    fun refresh(c: Context) {
-        val s = call(c, "GET", "/state") ?: return
-        if (Model.parse(s) != null) { Prefs.put(c, "model", s); WingmanWidget.updateAll(c) }
+    // Fetch the model, store it and redraw the widget. fresh also pulls new stock data. Returns false when it failed.
+    fun refresh(c: Context, fresh: Boolean = false): Boolean {
+        val s = call(c, "GET", if (fresh) "/state?fresh=1" else "/state") ?: return false
+        if (Model.parse(s) == null) return false
+        Prefs.put(c, "model", s); Prefs.put(c, "model_at", (System.currentTimeMillis() / 1000).toString()); WingmanWidget.updateAll(c)
+        return true
     }
 
     fun register(c: Context, token: String) {

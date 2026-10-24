@@ -208,7 +208,16 @@ class WingmanWidget : AppWidgetProvider() {
             items.forEach { r.addView(R.id.row, it) }; return r
         }
 
+        // Shows when the data last changed, so a refresh tap visibly does something.
         fun build(c: Context): RemoteViews {
+            val v = buildBody(c)
+            val at = Prefs.get(c, "model_at").toLongOrNull()
+            if (at != null) v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
+                it.setTextViewText(R.id.u_text, "UPDATED ${Tiles.clock(at)}") })
+            return v
+        }
+
+        private fun buildBody(c: Context): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.widget)
             v.removeAllViews(R.id.content)
             val refresh = RemoteViews(c.packageName, R.layout.s_sq).also {
