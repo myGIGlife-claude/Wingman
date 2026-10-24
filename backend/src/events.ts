@@ -47,3 +47,24 @@ export function diffEvents(prev: Prev, p: any, cfg: { item: string; tz: string }
   }
   return out;
 }
+
+// Status alerts: fire when a flag flips. A missing previous flag (first run) never fires.
+export interface Flags { energy: boolean; nerve: boolean; life: boolean; drug: boolean; booster: boolean; medical: boolean; hospital: boolean; jail: boolean }
+
+export function statusEvents(prev: Partial<Flags> | undefined, now: Flags, t: number): Evt[] {
+  if (!prev) return [];
+  const out: Evt[] = [];
+  const b = Math.floor(t / 600); // one alert per type per 10 minutes at most
+  const rose = (k: keyof Flags) => prev[k] === false && now[k];
+  const fell = (k: keyof Flags) => prev[k] === true && !now[k];
+  const add = (type: string, text: string, url: string | null) => out.push({ key: `${type}:${b}`, type, text, url });
+  if (rose('energy')) add('energy_full', 'Energy is full', `${TORN}/gym.php`);
+  if (rose('nerve')) add('nerve_full', 'Nerve is full', `${TORN}/loader.php?sid=crimes`);
+  if (rose('life')) add('life_full', 'Health is full', null);
+  if (rose('drug')) add('drug_ready', 'Drug cooldown is over', `${TORN}/item.php`);
+  if (rose('booster')) add('booster_ready', 'Booster cooldown is over', `${TORN}/item.php`);
+  if (rose('medical')) add('medical_ready', 'Medical cooldown is over', `${TORN}/item.php`);
+  if (fell('hospital')) add('hospital_out', 'You are out of the hospital', null);
+  if (fell('jail')) add('jail_out', 'You are out of jail', null);
+  return out;
+}

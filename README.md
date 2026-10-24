@@ -41,7 +41,7 @@ Wingman watches your status, your OC timer and foreign shop stock. It tells you 
 - **Abroad view** with a leave-by timer next to the OC timer, your item's stock and price, how many you can buy (limited by cash, carry capacity and shelf stock), and a **BOUGHT** button.
 - **Restock estimate.** When your item is sold out, Wingman shows a countdown to the likely restock. It learns each item's restock rhythm from the stock changes it sees, so the estimate improves over time.
 - **In-flight view** with a landing countdown and progress bar.
-- **Alerts** for: ready to fly, landed in stock, landed sold out, back in stock, leave within 5 minutes, leave now, back home, next step ready, OC ready.
+- **Alerts you can switch on and off one by one:** ready to fly, landed in stock or sold out, back in stock, leave within 5 minutes, leave now, back home, OC ready, out of hospital or jail, and optionally health, energy and nerve full and drug, booster and medical cooldowns over. Find them under **Alerts** in the app.
 - **Customizable layout.** Choose which bars, chips, panels and tiles show, and which quick buttons appear.
 - **Torn PDA userscript** (optional) that pre-fills the buy quantity on the shop page.
 
@@ -176,10 +176,10 @@ curl -s -X POST -H "X-Tick-Key: $TICK" "$URL/tick"; echo
 2. Enter your **Service URL** from step 7.
 3. Enter your **APP_SECRET**. Show it with: `gcloud secrets versions access latest --secret=APP_SECRET`
 4. Tap **Connect and load**. The status line should say "Connected."
-5. Pick your **destination** and **item**. The item list shows each item's current stock and price.
-6. Set the flight type, shopping and safety minutes, how many items you can carry, and the fly lock buffer. Tap **Save settings**.
-7. Tap **Test notification (this phone)**. If nothing appears, see [Troubleshooting](#troubleshooting).
-8. Tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
+5. Open the **Trip** section and pick your **destination** and **item**. The item list shows each item's current stock and price.
+6. Open **Timing** and set shopping and safety minutes, how many items you can carry, and the fly lock buffer, then tap **Save settings**. Open **Alerts** to choose which alerts you want.
+7. Open **Tools** and tap **Test notification (this phone)**. If nothing appears, see [Troubleshooting](#troubleshooting).
+8. In **Tools**, tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
 
 ### 12. Add the widget
 Long-press your home screen, tap **Widgets**, find **Wingman** and place it. Make it tall: stretch it vertically to fit more. The layout editor opens so you can choose what to show (you can reopen it any time from the app's **Widget layout** button).

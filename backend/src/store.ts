@@ -1,13 +1,14 @@
 import './firebase.ts';
 import { getFirestore } from 'firebase-admin/firestore';
-import { sanitizeSettings, SETTING_DEFAULTS, type Settings } from './settings.ts';
+import { ALERT_DEFAULTS, sanitizeSettings, SETTING_DEFAULTS, type Settings } from './settings.ts';
 
 const db = getFirestore();
 const settingsDoc = () => db.doc('config/settings');
 const stateDoc = () => db.doc('state/current');
 
 export async function getSettings(): Promise<Settings> {
-  return { ...SETTING_DEFAULTS, ...sanitizeSettings((await settingsDoc().get()).data()) };
+  const saved = sanitizeSettings((await settingsDoc().get()).data());
+  return { ...SETTING_DEFAULTS, ...saved, alerts: { ...ALERT_DEFAULTS, ...saved.alerts } }; // the app sees every switch with its effective value
 }
 export async function putSettings(s: unknown) {
   await settingsDoc().set(sanitizeSettings(s), { merge: true });

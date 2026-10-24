@@ -54,3 +54,16 @@ test('fly locks when round trip plus buffer no longer fits before the OC', () =>
   const f = widgetModel(at(150), cfg, false, user).facts!;
   assert.equal(f.name, 'Jon'); assert.equal(f.faction, 'Wings'); assert.equal(f.hospitalUntil, T + 600); assert.equal(f.jailUntil, null);
 });
+
+import { statusEvents } from './events.ts';
+import { alertOn, sanitizeSettings as san } from './settings.ts';
+test('status alerts fire on flips only, and the switches decide', () => {
+  const all = { energy: true, nerve: true, life: true, drug: true, booster: true, medical: true, hospital: false, jail: false };
+  assert.equal(statusEvents(undefined, all, 1000).length, 0);                                   // first run: nothing
+  const prev = { ...all, energy: false, drug: false, hospital: true };
+  assert.deepEqual(statusEvents(prev, all, 1000).map(e => e.type).sort(), ['drug_ready', 'energy_full', 'hospital_out']);
+  assert.equal(statusEvents(all, all, 1000).length, 0);                                         // no change, no alert
+  assert.equal(alertOn({}, 'ready_to_fly'), true); assert.equal(alertOn({}, 'energy_full'), false);
+  assert.equal(alertOn({ alerts: { energy_full: true } }, 'energy_full'), true);
+  assert.deepEqual(san({ alerts: { energy_full: true, nope: true, oc_ready: 'x' } }).alerts, { energy_full: true });
+});

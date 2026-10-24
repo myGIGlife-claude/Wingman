@@ -2,7 +2,8 @@ import { computePlan, learnFlight, DESTS } from './plan.ts';
 import { fetchUser, fetchOC, isKeyProblem, isRateLimit } from './torn.ts';
 import { fetchYata, findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
-import { diffEvents, type Evt } from './events.ts';
+import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
+import { alertOn } from './settings.ts';
 import { getSettings, getState, saveState, setYata } from './store.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent } from './logic.ts';
@@ -70,7 +71,12 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
 
   const prev = { phase: st.phase, nextId: st.nextId, qty: st.stockQty, ocNow: st.ocNow, arrival: st.arrival, homeAt: st.homeAt };
   const sent = pruneSent(st.sent, wall, SENT_TTL);
-  const events: Evt[] = diffEvents(prev, p, cfg, bought).filter(e => !sent[e.key]);
+  const bar = (b: any) => !!b && b.maximum > 0 && b.current >= b.maximum;
+  const cd = user.cooldowns || {};
+  const flags: Flags = { energy: bar(user.energy), nerve: bar(user.nerve), life: bar(user.life), drug: !(cd.drug > 0), booster: !(cd.booster > 0), medical: !(cd.medical > 0),
+    hospital: p.phase === 'hospital' || (user.states?.hospital_timestamp ?? 0) > t, jail: p.phase === 'jail' || (user.states?.jail_timestamp ?? 0) > t };
+  // The player's switches decide which alerts go out; a bad-key warning always does.
+  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
   const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
@@ -91,7 +97,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, hist, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null, snapshot: { user, oc },
+    landedCash: landedCash ?? null, bought, sent, model, hist, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null, snapshot: { user, oc },
   });
   return { ok: true, phase: p.phase };
 }
