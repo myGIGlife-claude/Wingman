@@ -30,7 +30,7 @@ class MainActivity : Activity() {
 
     private lateinit var url: EditText; private lateinit var secret: EditText
     private lateinit var dest: Picker; private lateinit var item: Picker; private lateinit var method: Picker
-    private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText
+    private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText; private lateinit var buf: EditText
     private lateinit var xanax: CheckBox; private lateinit var status: TextView
 
     private fun label(t: String) = TextView(this).apply { text = t.uppercase(); setTextColor(dim); textSize = 11f; letterSpacing = 0.12f; typeface = Typeface.MONOSPACE; setPadding(0, 28, 0, 4) }
@@ -76,7 +76,7 @@ class MainActivity : Activity() {
 
         dest = Picker(dests); method = Picker(methods)
         item = Picker(emptyList()); dest.onPick = { bg { loadItems(dests[dest.index].first, ""); save() } }; item.onPick = { save() }
-        shop = field("3", true); safety = field("10", true); cap = field("29", true)
+        shop = field("3", true); safety = field("10", true); cap = field("29", true); buf = field("90", true)
         xanax = CheckBox(this).apply { text = "Xanax step when drug cooldown is up"; setTextColor(paper); typeface = Typeface.MONOSPACE; isChecked = true }
         col.addView(label("Destination")); col.addView(dest)
         col.addView(label("Item to buy")); col.addView(item)
@@ -84,6 +84,7 @@ class MainActivity : Activity() {
         col.addView(label("Shopping minutes")); col.addView(shop)
         col.addView(label("Safety minutes")); col.addView(safety)
         col.addView(label("Items you can carry")); col.addView(cap)
+        col.addView(label("Fly lock buffer (minutes before OC)")); col.addView(buf)
         col.addView(xanax)
         col.addView(button("Save settings", true) { save() })
         col.addView(button("Widget layout", false) { startActivity(Intent(this, LayoutActivity::class.java)) })
@@ -115,7 +116,7 @@ class MainActivity : Activity() {
             dest.set(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
             method.set(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
             shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
-            cap.setText(j.optInt("capacity", 29).toString()); xanax.isChecked = j.optBoolean("xanax", true)
+            cap.setText(j.optInt("capacity", 29).toString()); buf.setText(j.optInt("flyBufferMin", 90).toString()); xanax.isChecked = j.optBoolean("xanax", true)
         }
         loadItems(j.optString("dest", "mex"), j.optString("item")); Api.refresh(this); say("Connected.")
     }
@@ -134,7 +135,7 @@ class MainActivity : Activity() {
     private fun save() = bg {
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
-            .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29)
+            .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90)
             .put("xanax", xanax.isChecked)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
         Api.refresh(this)

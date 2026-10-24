@@ -3,6 +3,7 @@ export interface Dest { id: string; name: string; short: string; min: number; al
 export interface Cfg {
   dest: string; item: string; method: string;
   shopMin: number; safetyMin: number; capacity: number; xanax: boolean;
+  flyBufferMin: number; // extra minutes of slack before the OC; the Fly button locks past this
 }
 export type Learned = Record<string, number>;
 export interface Step {
@@ -31,7 +32,7 @@ export const METHODS: Record<string, { label: string; mult: number }> = {
 };
 
 export const DEFAULTS: Cfg = {
-  dest: 'mex', item: '', method: 'standard', shopMin: 3, safetyMin: 10, capacity: 29, xanax: true,
+  dest: 'mex', item: '', method: 'standard', shopMin: 3, safetyMin: 10, capacity: 29, xanax: true, flyBufferMin: 90,
 };
 
 const fold = (s: unknown) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -84,6 +85,9 @@ export function computePlan(x: { user: any; oc: any; cfg: Cfg; t: number; learne
   p.ocNow = !!(o.ready && o.ready <= t);
   p.flyBy = o.ready ? o.ready - roundTrip : null;
   p.fits = o.ready ? t <= p.flyBy : true;
+  // Hard lockout: round trip plus the buffer must still fit before the OC.
+  p.flyOkUntil = o.ready ? o.ready - roundTrip - (cfg.flyBufferMin ?? 90) * 60 : null;
+  p.flyOk = p.flyOkUntil == null ? true : t <= p.flyOkUntil;
 
   if (st === 'Traveling' || (tr.timestamp && tr.timestamp > t && st !== 'Abroad' && st !== 'Hospital' && st !== 'Jail')) {
     p.phase = 'traveling';
@@ -124,7 +128,7 @@ export function computePlan(x: { user: any; oc: any; cfg: Cfg; t: number; learne
     cur: e.current, max: e.maximum, at: e.fulltime ? t + e.fulltime : null, href: '/gym.php' });
   p.steps.push({ id: 'crimes', label: 'Do your crimes', ready: n.maximum > 0 && n.current >= n.maximum,
     cur: n.current, max: n.maximum, at: n.fulltime ? t + n.fulltime : null, href: '/loader.php?sid=crimes' });
-  p.steps.push({ id: 'fly', label: `Fly to ${target.name}`, ready: !!cfg.item && p.fits && !p.ocNow, href: '/travelagency.php' });
+  p.steps.push({ id: 'fly', label: `Fly to ${target.name}`, ready: !!cfg.item && p.fits && p.flyOk && !p.ocNow, href: '/travelagency.php' });
   p.next = p.steps.find((s: Step) => s.ready) || null;
 
   if (o.ready && !p.fits && !p.ocNow) {

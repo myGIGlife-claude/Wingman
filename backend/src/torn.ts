@@ -14,7 +14,7 @@ async function get(url: string) {
 }
 
 export const fetchUser = (key: string) =>
-  get(`https://api.torn.com/user/?selections=basic,bars,cooldowns,travel,money,timestamp&key=${key}&comment=Wingman`);
+  get(`https://api.torn.com/user/?selections=basic,profile,bars,cooldowns,travel,money,timestamp&key=${key}&comment=Wingman`);
 
 // Returns the OC object, or null when the player has none.
 export async function fetchOC(key: string) {

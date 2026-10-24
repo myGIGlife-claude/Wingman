@@ -17,8 +17,8 @@ object Notifier {
         m.createNotificationChannel(NotificationChannel(UPDATES, "Updates", NotificationManager.IMPORTANCE_LOW))
     }
 
-    fun openIntent(c: Context, url: String?, code: Int): PendingIntent {
-        val i = Intent(c, OpenActivity::class.java).putExtra("url", url ?: "https://www.torn.com/")
+    fun openIntent(c: Context, url: String?, code: Int, before: Long = 0): PendingIntent {
+        val i = Intent(c, OpenActivity::class.java).putExtra("url", url ?: "https://www.torn.com/").putExtra("before", before)
         return PendingIntent.getActivity(c, code, i, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 

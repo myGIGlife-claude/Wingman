@@ -42,3 +42,15 @@ test('widget model carries facts for the tiles', () => {
   assert.equal(w.facts?.cooldowns.drug, T + 120); assert.equal(w.facts?.cooldowns.booster, null);
   assert.equal(w.facts?.cash, 5000); assert.equal(w.facts?.target, 'Japan');
 });
+
+test('fly locks when round trip plus buffer no longer fits before the OC', () => {
+  const T = 1_000_000;
+  const user = { status: { state: 'Okay' }, energy: { current: 1, maximum: 150 }, nerve: { current: 1, maximum: 50 }, cooldowns: { drug: 99 }, money_onhand: 1,
+    name: 'Jon', faction: { faction_name: 'Wings' }, life: { current: 10, maximum: 20, fulltime: 100 }, states: { hospital_timestamp: T + 600, jail_timestamp: 0 } };
+  const cfg = { ...DEFAULTS, dest: 'mex', item: 'X', tz: 'UTC' }; // Mexico round trip = 52+3+10 = 65m, buffer 90m => lock inside 155m
+  const at = (min: number) => computePlan({ user, oc: { name: 'OC', status: 'Planning', ready_at: T + min * 60 }, cfg, t: T });
+  assert.equal(at(160).flyOk, true); assert.equal(at(150).flyOk, false);
+  assert.equal(at(150).flyOkUntil, T + 150 * 60 - 155 * 60);
+  const f = widgetModel(at(150), cfg, false, user).facts!;
+  assert.equal(f.name, 'Jon'); assert.equal(f.faction, 'Wings'); assert.equal(f.hospitalUntil, T + 600); assert.equal(f.jailUntil, null);
+});

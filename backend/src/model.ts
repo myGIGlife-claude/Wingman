@@ -11,7 +11,8 @@ export interface Widget {
 
 // Raw numbers for the widget tiles. All times are epoch seconds so the phone can run its own countdowns.
 export interface Facts {
-  phase: string; ocName: string | null; ocStatus: string | null; ocReadyAt: number | null; ocNow: boolean;
+  phase: string; name: string | null; faction: string | null; life: Bar | null; hospitalUntil: number | null; jailUntil: number | null;
+  flyOkUntil: number | null; flyBufferSecs: number; ocName: string | null; ocStatus: string | null; ocReadyAt: number | null; ocNow: boolean;
   energy: Bar | null; nerve: Bar | null; cooldowns: { drug: number | null; booster: number | null; medical: number | null };
   cash: number | null; landAt: number | null; outbound: boolean | null; where: string | null; leaveBy: number | null; flyBy: number | null;
   flySecs: number; target: string; item: string; stock: { qty: number; cost: number; seen: number | null } | null;
@@ -38,8 +39,14 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean): Facts {
   const cd = (s: unknown) => (typeof s === 'number' && s > 0 ? t + s : null);
   const c = user?.cooldowns || {};
   const abroad = p.phase === 'abroad';
+  const until = (ts: unknown, state: string) => {
+    const v = typeof ts === 'number' && ts > t ? ts : user?.status?.state === state && user.status.until > t ? user.status.until : null;
+    return v;
+  };
   return {
-    phase: p.phase, ocName: p.oc?.name ?? null, ocStatus: p.oc?.status ?? null, ocReadyAt: p.oc?.ready ?? null, ocNow: !!p.ocNow,
+    phase: p.phase, name: user?.name ?? null, faction: user?.faction?.faction_name || null, life: bar(user?.life),
+    hospitalUntil: until(user?.states?.hospital_timestamp, 'Hospital'), jailUntil: until(user?.states?.jail_timestamp, 'Jail'),
+    flyOkUntil: p.flyOkUntil ?? null, flyBufferSecs: (cfg.flyBufferMin ?? 90) * 60, ocName: p.oc?.name ?? null, ocStatus: p.oc?.status ?? null, ocReadyAt: p.oc?.ready ?? null, ocNow: !!p.ocNow,
     energy: bar(user?.energy), nerve: bar(user?.nerve), cooldowns: { drug: cd(c.drug), booster: cd(c.booster), medical: cd(c.medical) },
     cash: typeof user?.money_onhand === 'number' ? user.money_onhand : null,
     landAt: p.landAt ?? null, outbound: p.phase === 'traveling' ? !!p.outbound : null, where: abroad ? p.here?.name ?? null : p.where ?? null,

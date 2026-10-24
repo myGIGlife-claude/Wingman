@@ -21,6 +21,7 @@ export function sanitizeSettings(s: any): Partial<Settings> {
   const shop = int(s.shopMin, 0, 60); if (shop !== undefined) out.shopMin = shop;
   const safe = int(s.safetyMin, 0, 120); if (safe !== undefined) out.safetyMin = safe;
   const cap = int(s.capacity, 1, 200); if (cap !== undefined) out.capacity = cap;
+  const buf = int(s.flyBufferMin, 0, 600); if (buf !== undefined) out.flyBufferMin = buf;
   if (typeof s.xanax === 'boolean') out.xanax = s.xanax;
   if (validTz(s.tz)) out.tz = s.tz;
   return out;
