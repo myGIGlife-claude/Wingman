@@ -6,14 +6,16 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
+import android.view.Gravity
 import android.widget.*
 
-// Pick which tiles the widget shows and in what order. Also opens when a widget is added.
+// Pick which parts the widget shows and in what order. Also opens when a widget is added.
 class LayoutActivity : Activity() {
     private val state = mutableListOf<Pair<TileDef, Boolean>>()
     private lateinit var col: LinearLayout
     private var title = true
     private val btnOn = mutableSetOf<String>()
+    private fun dp(n: Int) = (n * resources.displayMetrics.density).toInt()
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -23,37 +25,67 @@ class LayoutActivity : Activity() {
         Tiles.ALL.filter { d -> on.none { it == d.id } }.forEach { state.add(it to false) }
         title = Prefs.get(this, "show_title") != "0"
         btnOn.addAll(Prefs.get(this, "buttons").ifEmpty { Tiles.DEFAULT_BUTTONS }.split(','))
-        col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(40, 80, 40, 80) }
+        col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(40), dp(16), dp(40)) }
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col) })
         draw()
     }
 
-    private fun txt(t: String, c: Int, size: Float = 14f) = TextView(this).apply { text = t; setTextColor(c); textSize = size; typeface = Typeface.MONOSPACE }
+    private fun txt(t: String, c: Int, size: Float, bold: Boolean = false) = TextView(this).apply {
+        text = t; setTextColor(c); textSize = size; typeface = if (bold) Typeface.create(Typeface.MONOSPACE, Typeface.BOLD) else Typeface.MONOSPACE
+    }
+
+    private fun group(name: String) = col.addView(txt(name, DIM, 12f, true).apply { letterSpacing = 0.1f; setPadding(0, dp(20), 0, dp(6)) })
+
+    private fun row(label: String, enabled: Boolean, onToggle: (Boolean) -> Unit, up: (() -> Unit)? = null, down: (() -> Unit)? = null, note: String = ""): LinearLayout {
+        val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setBackgroundResource(R.drawable.card_bg); setPadding(dp(14), dp(10), dp(10), dp(10)) }
+        r.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) }
+        val names = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        names.addView(txt(label, if (enabled) PAPER else DIM, 14f))
+        if (note.isNotEmpty()) names.addView(txt(note, AMBER, 11f))
+        r.addView(names, LinearLayout.LayoutParams(0, -2, 1f))
+        fun arrow(s: String, f: () -> Unit) = Button(this).apply {
+            text = s; setTextColor(PAPER); textSize = 14f; setBackgroundResource(R.drawable.btn_ghost); minWidth = 0; minimumWidth = 0
+            setPadding(0, 0, 0, 0); setOnClickListener { f() }
+        }.also { r.addView(it, LinearLayout.LayoutParams(dp(40), dp(40)).apply { rightMargin = dp(6) }) }
+        up?.let { arrow("▲", it) }; down?.let { arrow("▼", it) }
+        r.addView(Ui.pill(this, enabled) { onToggle(it) })
+        return r
+    }
 
     private fun draw() {
         col.removeAllViews()
-        col.addView(txt("WIDGET LAYOUT", AMBER, 22f))
-        col.addView(txt("Tick what to show. Bars, status chips, the OC panel and extra tiles keep the design order; ▲ ▼ reorders within each group. Make the widget taller to fit more.", DIM, 12f))
-        state.forEachIndexed { i, (d, enabled) ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, 12, 0, 12) }
-            row.addView(CheckBox(this).apply { text = d.title; setTextColor(PAPER); typeface = Typeface.MONOSPACE; isChecked = enabled
-                setOnCheckedChangeListener { _, v -> state[i] = d to v } }, LinearLayout.LayoutParams(0, -2, 1f))
-            fun mv(label: String, to: Int) = row.addView(Button(this).apply { text = label; setOnClickListener { if (to in state.indices) { state.add(to, state.removeAt(i)); draw() } } })
-            mv("▲", i - 1); mv("▼", i + 1)
-            col.addView(row)
+        col.addView(txt("WIDGET LAYOUT", AMBER, 24f, true).apply { letterSpacing = 0.12f })
+        col.addView(txt("Tap ON or OFF to show or hide a part of the widget. Use ▲ ▼ to move shown parts.", DIM, 13f).apply { setPadding(0, dp(6), 0, 0) })
+
+        val shown = state.indices.filter { state[it].second }
+        group("SHOWN (${shown.size})")
+        shown.forEachIndexed { pos, i ->
+            val (d, _) = state[i]
+            col.addView(row(d.title, true, { state[i] = d to false; draw() },
+                up = if (pos > 0) { { state.add(shown[pos - 1], state.removeAt(i)); draw() } } else null,
+                down = if (pos < shown.size - 1) { { state.add(shown[pos + 1], state.removeAt(i)); draw() } } else null))
         }
-        col.addView(CheckBox(this).apply { text = "Show status line on top"; setTextColor(PAPER); typeface = Typeface.MONOSPACE; isChecked = title; setOnCheckedChangeListener { _, v -> title = v } })
-        col.addView(txt("QUICK BUTTONS (at home)", AMBER, 14f).apply { setPadding(0, 28, 0, 4) })
+        if (shown.isEmpty()) col.addView(txt("Nothing shown yet.", DIM, 13f))
+        val hidden = state.indices.filter { !state[it].second }
+        group("HIDDEN (${hidden.size})")
+        hidden.forEach { i -> val (d, _) = state[i]; col.addView(row(d.title, false, { state[i] = d to true; draw() })) }
+
+        group("QUICK BUTTONS AT HOME")
         Tiles.BUTTONS.forEach { b ->
-            col.addView(CheckBox(this).apply { text = b.label + if (b.id == "fly") "  (locks near your OC)" else ""; setTextColor(PAPER); typeface = Typeface.MONOSPACE
-                isChecked = b.id in btnOn; setOnCheckedChangeListener { _, v -> if (v) btnOn.add(b.id) else btnOn.remove(b.id) } })
+            col.addView(row(b.label, b.id in btnOn, { if (it) btnOn.add(b.id) else btnOn.remove(b.id); draw() }, note = if (b.id == "fly") "locks near your OC" else ""))
         }
-        col.addView(Button(this).apply { text = "SAVE"; typeface = Typeface.MONOSPACE; setTextColor(Color.parseColor("#0E0E0C")); setBackgroundResource(R.drawable.btn_amber); setOnClickListener { save() } })
+        group("OTHER")
+        col.addView(row("Status line on top", title, { title = it; draw() }))
+        col.addView(Button(this).apply {
+            text = "SAVE"; typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD); textSize = 14f; letterSpacing = 0.1f
+            setTextColor(Color.parseColor("#0E0E0C")); setBackgroundResource(R.drawable.btn_amber); setOnClickListener { save() }
+        }, LinearLayout.LayoutParams(-1, dp(54)).apply { topMargin = dp(16) })
     }
 
     private fun save() {
         Prefs.put(this, "layout", state.filter { it.second }.joinToString(",") { it.first.id })
-        Prefs.put(this, "show_title", if (title) "1" else "0"); Prefs.put(this, "buttons", Tiles.BUTTONS.map { it.id }.filter { it in btnOn }.joinToString(","))
+        Prefs.put(this, "show_title", if (title) "1" else "0")
+        Prefs.put(this, "buttons", Tiles.BUTTONS.map { it.id }.filter { it in btnOn }.joinToString(","))
         WingmanWidget.updateAll(this)
         val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))

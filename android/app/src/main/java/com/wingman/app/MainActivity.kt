@@ -49,7 +49,7 @@ class MainActivity : Activity() {
         AlertDef("medical_ready", "Medical cooldown over", "You can use a medical item again", "BARS AND COOLDOWNS", false),
     )
     private val alertState = mutableMapOf<String, Boolean>().also { m -> alertDefs.forEach { m[it.key] = it.on } }
-    private var syncing = false
+    private var alertsBody: LinearLayout? = null
 
     private val amber = Color.parseColor("#FFB627")
     private val paper = Color.parseColor("#EDE7D3")
@@ -61,7 +61,7 @@ class MainActivity : Activity() {
     private lateinit var url: EditText; private lateinit var secret: EditText
     private lateinit var dest: Picker; private lateinit var item: Picker; private lateinit var method: Picker
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText; private lateinit var buf: EditText
-    private lateinit var xanax: CheckBox; private lateinit var status: TextView
+    private lateinit var xanax: Ui.Pill; private lateinit var status: TextView
     private var connected = false
     private val summaries = mutableListOf<Pair<TextView, () -> String>>()
 
@@ -131,7 +131,7 @@ class MainActivity : Activity() {
         dest = Picker(dests); method = Picker(methods); item = Picker(emptyList())
         dest.onPick = { bg { loadItems(dests[dest.index].first, ""); save() } }; item.onPick = { save() }
         shop = field("3", true); safety = field("10", true); cap = field("29", true); buf = field("90", true)
-        xanax = CheckBox(this).apply { text = "Xanax step when drug cooldown is up"; mono(this, 14f, paper); isChecked = true }
+        xanax = Ui.pill(this, true) { }
 
         val hasUrl = Prefs.get(this, "url").isNotEmpty()
         section(col, "CONNECTION", { if (connected) "Connected" else if (hasUrl) "Connecting…" else "Not connected" }, !hasUrl) {
@@ -145,10 +145,14 @@ class MainActivity : Activity() {
             addView(label("Shopping minutes")); addView(shop); addView(label("Safety minutes")); addView(safety)
             addView(label("Items you can carry")); addView(cap); addView(label("Fly lock buffer (minutes before OC)")); addView(buf)
             addView(mono(TextView(this@MainActivity).apply { text = "The Fly button locks when a round trip plus this buffer no longer fits before your OC."; setPadding(0, dp(6), 0, 0) }, 12f, dim))
-            addView(xanax)
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(14), 0, 0)
+                addView(mono(TextView(this@MainActivity).apply { text = "Xanax step when the drug cooldown is up" }, 14f, paper), LinearLayout.LayoutParams(0, -2, 1f))
+                addView(xanax)
+            })
             addView(button("Save settings", true) { save() })
         }
-        section(col, "ALERTS", { "${alertDefs.count { alertState[it.key] ?: it.on }} of ${alertDefs.size} on" }, false) { buildAlerts(this) }
+        section(col, "ALERTS", { "${alertDefs.count { alertState[it.key] ?: it.on }} of ${alertDefs.size} on" }, false) { alertsBody = this; buildAlerts(this) }
         section(col, "WIDGET", { "Choose what the widget shows" }, false) {
             addView(button("Widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
         }
@@ -172,12 +176,12 @@ class MainActivity : Activity() {
             val txt = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             txt.addView(mono(TextView(this).apply { text = d.title }, 14f, paper)); txt.addView(mono(TextView(this).apply { text = d.desc }, 12f, dim))
             row.addView(txt, LinearLayout.LayoutParams(0, -2, 1f))
-            val sw = Switch(this).apply {
-                tag = d.key; isChecked = alertState[d.key] ?: d.on
-                thumbTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(amber, dim))
-                trackTintList = ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Color.parseColor("#66FFB627"), border))
-                setOnCheckedChangeListener { _, v -> if (syncing) return@setOnCheckedChangeListener; alertState[d.key] = v; summaries.forEach { (t, f) -> t.text = f() }; save() }
+            val title = txt.getChildAt(0) as TextView
+            val sw = Ui.pill(this, alertState[d.key] ?: d.on) { v ->
+                alertState[d.key] = v; title.setTextColor(if (v) paper else dim); summaries.forEach { (t, f) -> t.text = f() }; save()
             }
+            sw.tag = d.key
+            title.setTextColor(if (alertState[d.key] ?: d.on) paper else dim)
             row.addView(sw); body.addView(row)
         }
     }
@@ -200,7 +204,7 @@ class MainActivity : Activity() {
             dest.set(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
             method.set(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
             shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
-            cap.setText(j.optInt("capacity", 29).toString()); buf.setText(j.optInt("flyBufferMin", 90).toString()); xanax.isChecked = j.optBoolean("xanax", true)
+            cap.setText(j.optInt("capacity", 29).toString()); buf.setText(j.optInt("flyBufferMin", 90).toString()); xanax.set(j.optBoolean("xanax", true))
             if (al != null) alertDefs.forEach { d -> if (al.has(d.key)) alertState[d.key] = al.getBoolean(d.key) }
             document()
         }
@@ -208,17 +212,10 @@ class MainActivity : Activity() {
         connected = true; runOnUiThread { document() }; say("Connected.")
     }
 
-    // Re-draw the alert switches and the section summaries after settings arrive.
+    // Rebuild the alert rows and summaries after settings arrive.
     private fun document() {
-        syncing = true
-        (window.decorView).findViewsWithTagCompat().forEach { sw -> (sw as Switch).isChecked = alertState[sw.tag as String] ?: true }
-        syncing = false
+        alertsBody?.let { it.removeAllViews(); buildAlerts(it) }
         summaries.forEach { (t, f) -> t.text = f() }
-    }
-    private fun View.findViewsWithTagCompat(): List<View> {
-        val out = mutableListOf<View>()
-        fun walk(v: View) { if (v is Switch && v.tag is String) out.add(v); if (v is ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i)) }
-        walk(this); return out
     }
 
     // Items sold in the chosen country with stock and price (YATA, player-reported).
@@ -237,7 +234,7 @@ class MainActivity : Activity() {
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
             .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90)
-            .put("xanax", xanax.isChecked).put("alerts", alerts)
+            .put("xanax", xanax.on).put("alerts", alerts)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
         Api.refresh(this)
     }
