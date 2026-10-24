@@ -43,10 +43,17 @@ class MainActivity : Activity() {
         setOnClickListener { click() }
     }
     private fun spinner(list: List<Pair<String, String>>) = Spinner(this).apply {
-        adapter = object : ArrayAdapter<String>(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, list.map { it.second }) {
-            override fun getView(p: Int, v: View?, g: android.view.ViewGroup) = (super.getView(p, v, g) as TextView).also { it.setTextColor(paper); it.typeface = Typeface.MONOSPACE }
-            override fun getDropDownView(p: Int, v: View?, g: android.view.ViewGroup) = (super.getDropDownView(p, v, g) as TextView).also { it.setTextColor(Color.BLACK) }
+        val names = list.map { it.second }
+        fun row(text: String) = TextView(this@MainActivity).apply {
+            this.text = text; setTextColor(paper); typeface = Typeface.MONOSPACE; textSize = 16f; setPadding(24, 28, 24, 28)
         }
+        adapter = object : BaseAdapter() {
+            override fun getCount() = names.size
+            override fun getItem(p: Int) = names[p]
+            override fun getItemId(p: Int) = p.toLong()
+            override fun getView(p: Int, v: View?, g: android.view.ViewGroup) = row(names[p])
+        }
+        setPopupBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.parseColor("#1E1D16")))
     }
 
     override fun onCreate(b: Bundle?) {
@@ -79,10 +86,11 @@ class MainActivity : Activity() {
         col.addView(status)
 
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col) })
+        Prefs.get(this, "crash").takeIf { it.isNotEmpty() }?.let { status.text = "LAST CRASH:\n$it"; Prefs.put(this, "crash", "") }
         if (Prefs.get(this, "url").isNotEmpty()) load()
     }
 
-    private fun bg(f: () -> Unit) = Thread(f).start()
+    private fun bg(f: () -> Unit) = Thread { try { f() } catch (e: Throwable) { say("Error: " + e.toString()) } }.start()
     private fun say(t: String) = runOnUiThread { status.text = t }
 
     private fun connect() {
