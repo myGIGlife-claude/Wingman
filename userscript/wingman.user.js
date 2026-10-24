@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wingman
 // @namespace    ocrp.torn
-// @version      1.1.0
+// @version      1.1.1
 // @description  Torn PDA helper: OC countdown, "does a trip fit before my OC?" check, foreign stock watch with restock alarm, and a home checklist (Xanax, gym, crimes). Reads the API only. Every game action stays your tap.
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
@@ -945,6 +945,12 @@ position:fixed;left:10px;bottom:64px;z-index:2147483000;font:12.5px/1.4 ui-monos
     root.addEventListener('pointerdown', unlockAudio, { passive: true });
     S.root = root;
 
+    // Shared settings: pull what the app saved so both stay in sync.
+    syncBackend('GET', '/settings').then(r => {
+      if (!r || !r.dest) return;
+      for (const k of ['dest', 'item', 'method', 'shopMin', 'safetyMin', 'capacity', 'xanax']) if (r[k] !== undefined) S.cfg[k] = r[k];
+      save('cfg', S.cfg); afterUpdate();
+    });
     if (!S.cfg.item && !S.user) { S.open = true; }
     afterUpdate();
     observePage();

@@ -17,7 +17,7 @@ A Torn helper that plans travel/buy runs around your Organized Crime (OC). It wa
 5. Long-press the home screen, **Widgets → Wingman**.
 
 ## Install the userscript (Torn PDA)
-Add `userscript/wingman.user.js` in Torn PDA's userscripts. Optionally enter your backend URL and app secret in its settings panel so the widget and PDA stay in sync.
+Add `userscript/wingman.user.js` in Torn PDA's userscripts. Optionally enter your backend URL and app secret in its settings panel so the widget and PDA stay in sync. The secret is kept in the page's local storage on torn.com, where other userscripts can read it. With it someone could change your Wingman settings or send test pushes, but not touch your Torn account, so only install userscripts you trust.
 
 ## Host your own backend
 You need a Google Cloud project with billing, Firestore (Native mode), Secret Manager, Cloud Run, Cloud Scheduler and a Firebase Android app (`com.wingman.app`).

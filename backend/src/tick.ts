@@ -5,6 +5,7 @@ import { widgetModel, type Widget } from './model.ts';
 import { diffEvents, type Evt } from './events.ts';
 import { getSettings, getState, saveState } from './store.ts';
 import { push } from './fcm.ts';
+import { nextBought, pruneSent } from './logic.ts';
 
 const SENT_TTL = 3 * 86400;
 
@@ -29,8 +30,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     if (isKeyProblem(e)) {
       const k = `key:${Math.floor(wall / 86400)}`;
       if (!st.sent?.[k]) {
-        const model = st.model as Widget;
-        await push(model, [{ text: 'Torn API key problem — check settings', url: null }]).catch(() => {});
+        await push(st.model as Widget | undefined, [{ text: 'Torn API key problem — check settings', url: null }]).catch(() => {});
         await saveState({ ...st, sent: { ...st.sent, [k]: wall } });
       }
       return { ok: false, note: 'key problem' };
@@ -55,23 +55,34 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     if (l) { st.learned = { ...st.learned, [l.key]: l.secs }; p = plan(user, oc, cfg, st, t); }
   }
 
-  // Bought flag: reset on phase change, set when cash drops by at least one item's cost.
-  let bought = !!st.bought;
-  if (p.phase !== st.phase) { bought = false; st.landedCash = p.phase === 'abroad' ? user.money_onhand : null; }
-  if (p.phase === 'abroad' && p.stock && st.landedCash != null && user.money_onhand <= st.landedCash - p.stock.cost) bought = true;
+  const phaseChanged = p.phase !== st.phase;
+  const landedCash = phaseChanged ? (p.phase === 'abroad' ? user.money_onhand : null) : st.landedCash;
+  let bought = nextBought({ prevBought: !!st.bought, phaseChanged, abroad: p.phase === 'abroad', cost: p.stock?.cost, landedCash, cash: user.money_onhand });
 
-  const prev = { phase: st.phase, nextId: st.nextId, qty: st.stockQty, ocNow: st.ocNow, arrival: st.arrival };
-  const sent: Record<string, number> = Object.fromEntries(Object.entries(st.sent ?? {}).filter(([, v]) => (v as number) > wall - SENT_TTL)) as any;
+  const prev = { phase: st.phase, nextId: st.nextId, qty: st.stockQty, ocNow: st.ocNow, arrival: st.arrival, homeAt: st.homeAt };
+  const sent = pruneSent(st.sent, wall, SENT_TTL);
   const events: Evt[] = diffEvents(prev, p, cfg, bought).filter(e => !sent[e.key]);
-  for (const e of events) sent[e.key] = wall;
 
   const model = widgetModel(p, cfg, bought);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
-  if (changed || events.length) await push(model, events).catch(e => console.error('push failed', e));
+  if (changed || events.length) {
+    try { await push(model, events); } catch (e) {
+      // Keep the old phase/model so the same events and widget update are tried again next tick.
+      console.error('push failed', e);
+      await saveState({ ...st, yata: st.yata, learned: st.learned });
+      return { ok: false, phase: p.phase, note: 'push failed' };
+    }
+  }
+  for (const e of events) sent[e.key] = wall;
+
+  // A BOUGHT tap that landed while this tick ran must not be overwritten.
+  if (bought === !!st.bought) bought = !!(await getState()).bought;
 
   await saveState({
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
-    arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null, bought, sent, model, snapshot: { user, oc },
+    arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
+    homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
+    landedCash: landedCash ?? null, bought, sent, model, snapshot: { user, oc },
   });
   return { ok: true, phase: p.phase };
 }

@@ -1,20 +1,16 @@
-import { Firestore } from '@google-cloud/firestore';
-import { DEFAULTS, type Cfg } from './plan.ts';
+import './firebase.ts';
+import { getFirestore } from 'firebase-admin/firestore';
+import { sanitizeSettings, SETTING_DEFAULTS, type Settings } from './settings.ts';
 
-const db = new Firestore();
-export type Settings = Cfg & { tz: string };
-export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York' };
-
+const db = getFirestore();
 const settingsDoc = () => db.doc('config/settings');
 const stateDoc = () => db.doc('state/current');
 
 export async function getSettings(): Promise<Settings> {
-  return { ...SETTING_DEFAULTS, ...((await settingsDoc().get()).data() ?? {}) };
+  return { ...SETTING_DEFAULTS, ...sanitizeSettings((await settingsDoc().get()).data()) };
 }
-export async function putSettings(s: Partial<Settings>) {
-  const clean: Partial<Settings> = {};
-  for (const k of Object.keys(SETTING_DEFAULTS) as (keyof Settings)[]) if (s[k] !== undefined) (clean as any)[k] = s[k];
-  await settingsDoc().set(clean, { merge: true });
+export async function putSettings(s: unknown) {
+  await settingsDoc().set(sanitizeSettings(s), { merge: true });
 }
 export const getState = async (): Promise<any> => (await stateDoc().get()).data() ?? {};
 export const saveState = (s: any) => stateDoc().set(s);

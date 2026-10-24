@@ -1,7 +1,7 @@
 // Diff the new plan against the last tick and list the alerts to send (spec section 6).
 import { clock } from './model.ts';
 
-export interface Prev { phase?: string; nextId?: string | null; qty?: number | null; ocNow?: boolean; arrival?: number | null }
+export interface Prev { homeAt?: number | null; phase?: string; nextId?: string | null; qty?: number | null; ocNow?: boolean; arrival?: number | null }
 export interface Evt { key: string; type: string; text: string; url: string | null }
 
 const TORN = 'https://www.torn.com';
@@ -17,7 +17,7 @@ export function diffEvents(prev: Prev, p: any, cfg: { item: string; tz: string }
 
   if (p.phase === 'home') {
     if (nextId === 'fly' && prev.nextId !== 'fly') {
-      add(`fly:${p.oc.ready}:${p.target.id}`, 'ready_to_fly',
+      add(`fly:${p.oc.ready}:${p.target.id}:${prev.homeAt ?? 0}`, 'ready_to_fly',
         `Ready to fly to ${p.target.name}${p.flyBy ? ` — ${spare(p.flyBy - t)} to spare` : ''}`, `${TORN}/travelagency.php`);
     } else if (nextId && nextId !== 'fly' && nextId !== prev.nextId) {
       const s = p.next;

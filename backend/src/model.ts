@@ -8,8 +8,10 @@ export interface Widget {
   primary: Primary; showBought: boolean; updatedAt: number;
 }
 
-export const clock = (ts: number, tz: string) =>
-  new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(new Date(ts * 1000));
+export function clock(ts: number, tz: string) {
+  const fmt = (timeZone: string) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(ts * 1000));
+  try { return fmt(tz); } catch { return fmt('UTC'); } // a bad stored zone must not break ticks
+}
 const money = (n: number) => n >= 1e6 ? `$${+(n / 1e6).toFixed(2)}m` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : `$${n}`;
 const ago = (t: number, u?: number) => (u ? `seen ${Math.max(0, Math.round((t - u) / 60))}m ago` : '');
 const fmt = (s: number) => { s = Math.max(0, Math.round(s)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`; };

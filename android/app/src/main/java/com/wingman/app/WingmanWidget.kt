@@ -44,8 +44,8 @@ class WingmanWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.title, m.title)
             v.setTextViewText(R.id.sub, m.sub)
             val to = m.countdownTo
-            if (to != null) {
-                val left = to - System.currentTimeMillis() / 1000
+            val left = if (to != null) to - System.currentTimeMillis() / 1000 else 0
+            if (to != null && left > 0) {
                 v.setViewVisibility(R.id.countdown, View.VISIBLE)
                 v.setChronometerCountDown(R.id.countdown, true)
                 v.setChronometer(R.id.countdown, SystemClock.elapsedRealtime() + left * 1000, null, left > 0)

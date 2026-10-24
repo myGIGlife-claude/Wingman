@@ -5,5 +5,5 @@ Torn OC run helper: GCP backend + Android widget + PDA userscript. Spec: `upload
 ## Project notes
 - PUBLIC repo. Never commit keys, `google-services.json`, org names, emails or addresses.
 - Torn ToS rule: API data (`api.torn.com`, read-only) and pages the player is viewing only. Never automate game actions, never call torn.com pages, never `.click()`/`.submit()`. Player taps every action.
-- Backend: `cd backend && npm test` (Node 24 runs the `.ts` tests directly; no deps needed for `plan.ts`). Build target Node 20 via `tsc`.
+- Backend: `cd backend && npm test` (Node 24 runs the `.ts` tests directly; no deps needed for `plan.ts`). Build target Node 22 via `tsc`.
 - App display name is Wingman; Android package is `com.wingman.app`.
