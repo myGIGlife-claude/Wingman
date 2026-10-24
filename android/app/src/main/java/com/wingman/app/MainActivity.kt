@@ -50,7 +50,7 @@ class MainActivity : Activity() {
             private set
         var onPick: (() -> Unit)? = null
         val key get() = list.getOrNull(index)?.first ?: ""
-        fun setList(l: List<Pair<String, String>>, selectKey: String) { list = l; set(l.indexOfFirst { it.first == selectKey }.coerceAtLeast(0)) }
+        fun setList(l: List<Pair<String, String>>, selectKey: String) { list = l; set(l.indexOfFirst { it.first == selectKey }) }
         init {
             typeface = Typeface.MONOSPACE; setTextColor(paper); isAllCaps = false; gravity = Gravity.START or Gravity.CENTER_VERTICAL
             setBackgroundResource(R.drawable.btn_ghost); set(0)
@@ -58,7 +58,7 @@ class MainActivity : Activity() {
                 AlertDialog.Builder(this@MainActivity).setItems(list.map { it.second }.toTypedArray()) { _, i -> set(i); onPick?.invoke() }.show()
             }
         }
-        fun set(i: Int) { index = i; text = (list.getOrNull(i)?.second ?: "No stock data yet") + "  ▾" }
+        fun set(i: Int) { index = i; text = (list.getOrNull(i)?.second ?: if (list.isEmpty()) "No stock data yet" else "Choose an item") + "  ▾" }
     }
 
     override fun onCreate(b: Bundle?) {
@@ -75,7 +75,7 @@ class MainActivity : Activity() {
         col.addView(button("Connect and load", true) { connect() })
 
         dest = Picker(dests); method = Picker(methods)
-        item = Picker(emptyList()); dest.onPick = { bg { loadItems("") } }
+        item = Picker(emptyList()); dest.onPick = { bg { loadItems(dests[dest.index].first, ""); save() } }; item.onPick = { save() }
         shop = field("3", true); safety = field("10", true); cap = field("29", true)
         xanax = CheckBox(this).apply { text = "Xanax step when drug cooldown is up"; setTextColor(paper); typeface = Typeface.MONOSPACE; isChecked = true }
         col.addView(label("Destination")); col.addView(dest)
@@ -116,12 +116,11 @@ class MainActivity : Activity() {
             shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
             cap.setText(j.optInt("capacity", 29).toString()); xanax.isChecked = j.optBoolean("xanax", true)
         }
-        loadItems(j.optString("item")); Api.refresh(this); say("Connected.")
+        loadItems(j.optString("dest", "mex"), j.optString("item")); Api.refresh(this); say("Connected.")
     }
 
     // Items sold in the chosen country with stock and price (YATA, player-reported).
-    private fun loadItems(want: String) {
-        val d = dests[dest.index].first
+    private fun loadItems(d: String, want: String) {
         val r = Api.call(this, "GET", "/items?dest=$d") ?: return
         val a = JSONArray(r)
         val rows = (0 until a.length()).map { a.getJSONObject(it) }.map {
