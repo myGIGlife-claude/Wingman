@@ -19,5 +19,7 @@ Android app (widget, FCM, settings, CI).
 - 2026-10-24: No workers attached, no gcloud/firebase CLI on server; building code myself. GCP work goes through the clauderc service account (cannot grant roles or link billing).
 - 2026-10-24: GCP project `wingman-oc` created under the org via API. `wingman` was taken. Blocked on billing link by Jonathan before enabling APIs.
 
+- 2026-10-24: Widget is tile-based and customizable (v1.2.0): backend sends `facts`, app composes tiles from Prefs layout.
+
 ## Known issues
 - Need from Jonathan: link billing to `wingman-oc` in console; Torn API key (Limited) via cLaudeRC. Region assumed us-east1.

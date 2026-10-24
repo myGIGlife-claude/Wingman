@@ -29,3 +29,16 @@ test('fly alert key changes per trip', () => {
   const b = diffEvents({ phase: 'home', homeAt: 99 }, p, { item: 'X', tz: 'UTC' }, false)[0].key;
   assert.notEqual(a, b);
 });
+
+import { computePlan, DEFAULTS } from './plan.ts';
+import { widgetModel } from './model.ts';
+test('widget model carries facts for the tiles', () => {
+  const T = 1_000_000;
+  const user = { status: { state: 'Okay' }, energy: { current: 10, maximum: 150, fulltime: 600 }, nerve: { current: 5, maximum: 50, fulltime: 0 },
+    cooldowns: { drug: 120, booster: 0, medical: 0 }, money_onhand: 5000 };
+  const cfg = { ...DEFAULTS, dest: 'jap', item: 'Xanax', tz: 'UTC' };
+  const w = widgetModel(computePlan({ user, oc: { name: 'OC', status: 'Planning', ready_at: T + 9999 }, cfg, t: T }), cfg, false, user);
+  assert.equal(w.facts?.ocReadyAt, T + 9999); assert.equal(w.facts?.energy?.fullAt, T + 600);
+  assert.equal(w.facts?.cooldowns.drug, T + 120); assert.equal(w.facts?.cooldowns.booster, null);
+  assert.equal(w.facts?.cash, 5000); assert.equal(w.facts?.target, 'Japan');
+});

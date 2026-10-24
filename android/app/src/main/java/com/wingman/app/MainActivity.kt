@@ -86,6 +86,7 @@ class MainActivity : Activity() {
         col.addView(label("Items you can carry")); col.addView(cap)
         col.addView(xanax)
         col.addView(button("Save settings", true) { save() })
+        col.addView(button("Widget layout", false) { startActivity(Intent(this, LayoutActivity::class.java)) })
         col.addView(button("Test notification (this phone)", false) { localTest() })
         col.addView(button("Test push from backend", false) { say("Push requested. Wait a few seconds."); bg { Api.call(this, "POST", "/test") } })
         col.addView(button("Battery: set Unrestricted", false) { batteryHelp() })

@@ -6,7 +6,18 @@ export interface Primary { label: string; url: string | null; style: 'amber' | '
 export interface Widget {
   phase: string; title: string; countdownTo: number | null; countdownLabel: string; sub: string;
   primary: Primary; showBought: boolean; updatedAt: number;
+  facts?: Facts;
 }
+
+// Raw numbers for the widget tiles. All times are epoch seconds so the phone can run its own countdowns.
+export interface Facts {
+  phase: string; ocName: string | null; ocStatus: string | null; ocReadyAt: number | null; ocNow: boolean;
+  energy: Bar | null; nerve: Bar | null; cooldowns: { drug: number | null; booster: number | null; medical: number | null };
+  cash: number | null; landAt: number | null; outbound: boolean | null; where: string | null; leaveBy: number | null; flyBy: number | null;
+  flySecs: number; target: string; item: string; stock: { qty: number; cost: number; seen: number | null } | null;
+  buyMax: number | null; buyWhy: string | null; next: string | null; bought: boolean; fits: boolean | null;
+}
+interface Bar { cur: number; max: number; fullAt: number | null }
 
 export function clock(ts: number, tz: string) {
   const fmt = (timeZone: string) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(ts * 1000));
@@ -21,7 +32,25 @@ export function buyLabel(p: any): string {
   return b?.why === 'cash' ? 'NOT ENOUGH CASH' : `BUY MAX (${b?.n ?? 0})`;
 }
 
-export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean): Widget {
+export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean): Facts {
+  const t: number = p.t;
+  const bar = (b: any): Bar | null => b && b.maximum ? { cur: b.current, max: b.maximum, fullAt: b.fulltime ? t + b.fulltime : null } : null;
+  const cd = (s: unknown) => (typeof s === 'number' && s > 0 ? t + s : null);
+  const c = user?.cooldowns || {};
+  const abroad = p.phase === 'abroad';
+  return {
+    phase: p.phase, ocName: p.oc?.name ?? null, ocStatus: p.oc?.status ?? null, ocReadyAt: p.oc?.ready ?? null, ocNow: !!p.ocNow,
+    energy: bar(user?.energy), nerve: bar(user?.nerve), cooldowns: { drug: cd(c.drug), booster: cd(c.booster), medical: cd(c.medical) },
+    cash: typeof user?.money_onhand === 'number' ? user.money_onhand : null,
+    landAt: p.landAt ?? null, outbound: p.phase === 'traveling' ? !!p.outbound : null, where: abroad ? p.here?.name ?? null : p.where ?? null,
+    leaveBy: p.leaveBy ?? null, flyBy: p.flyBy ?? null, flySecs: abroad ? p.flyBack : p.fly, target: p.target.name, item: cfg.item,
+    stock: p.stock ? { qty: p.stock.qty, cost: p.stock.cost, seen: p.stock.update ?? null } : null,
+    buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
+    next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,
+  };
+}
+
+export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any): Widget {
   const t: number = p.t, tz = cfg.tz;
   const w: Widget = { phase: p.phase, title: '', countdownTo: null, countdownLabel: '', sub: '', primary: { label: 'WAITING', url: null, style: 'ghost' }, showBought: false, updatedAt: t };
 
@@ -58,5 +87,6 @@ export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean):
       if (soonest) { w.countdownTo = soonest.at; w.countdownLabel = soonest.id.toUpperCase(); }
     }
   }
+  w.facts = factsOf(p, cfg, user, bought);
   return w;
 }

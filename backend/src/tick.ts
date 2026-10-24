@@ -63,7 +63,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   const sent = pruneSent(st.sent, wall, SENT_TTL);
   const events: Evt[] = diffEvents(prev, p, cfg, bought).filter(e => !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought);
+  const model = widgetModel(p, cfg, bought, user);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(model, events); } catch (e) {
@@ -91,5 +91,5 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
 export async function currentModel(key: string): Promise<Widget> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
   const [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
-  return widgetModel(plan(user, oc, cfg, st, user.timestamp), cfg, !!st.bought);
+  return widgetModel(plan(user, oc, cfg, st, user.timestamp), cfg, !!st.bought, user);
 }

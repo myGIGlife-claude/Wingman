@@ -6,6 +6,7 @@ import org.json.JSONObject
 data class Model(
     val phase: String, val title: String, val countdownTo: Long?, val countdownLabel: String,
     val sub: String, val label: String, val url: String?, val style: String, val showBought: Boolean,
+    val facts: JSONObject? = null,
 ) {
     companion object {
         fun parse(json: String): Model? = try {
@@ -16,7 +17,7 @@ data class Model(
                 if (j.isNull("countdownTo")) null else j.getLong("countdownTo"),
                 j.optString("countdownLabel"), j.optString("sub"),
                 p.optString("label"), if (p.isNull("url")) null else p.getString("url"),
-                p.optString("style", "ghost"), j.optBoolean("showBought"),
+                p.optString("style", "ghost"), j.optBoolean("showBought"), j.optJSONObject("facts"),
             )
         } catch (e: Exception) { null }
     }
