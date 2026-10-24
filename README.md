@@ -233,7 +233,7 @@ cd android && ./gradlew :app:assembleDebug
 
 - Planning logic is in `backend/src/plan.ts`, with tests in `plan.test.ts`.
 - Releases are tagged (`v1.5.1` and so on). The app shows its version on the settings screen.
-- The Cloud Shell commands in the setup steps follow the same sequence the original deployment used, which was done through Google's APIs and verified end to end. If a command differs on your account, open an issue.
+- The Cloud Shell commands in the setup steps follow the same sequence the original deployment used, but that deployment was done through Google's APIs, so these exact `gcloud` commands have not been run end to end. If one fails or differs on your account, please open an issue.
 - `infra/` holds the scripts used to set up the original deployment through Google's APIs. They need a service account key, so the steps above are simpler for most people.
 
 ## Credits and disclaimer
