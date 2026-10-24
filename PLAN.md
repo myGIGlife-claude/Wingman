@@ -4,10 +4,10 @@ Last updated: 2026-10-24 00:20 UTC
 Torn OC Run: GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/torn-oc-run-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
-Backend core: port `computePlan` to `backend/src/plan.ts` with tests (spec section 5).
+Backend: torn/yata clients, widget model, events, tick, routes.
 
 ## Tasks
-- [ ] Backend: plan.ts + tests
+- [x] Backend: plan.ts + tests (11 pass)
 - [ ] Backend: torn/yata clients, widget model, events, tick, routes, Firestore, FCM
 - [ ] Userscript v1.1 (buy max prefill, live stock, capacity, shared settings)
 - [ ] Android app (widget, FCM, settings, CI workflow)
