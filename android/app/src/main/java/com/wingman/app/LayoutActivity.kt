@@ -33,7 +33,7 @@ class LayoutActivity : Activity() {
     private fun draw() {
         col.removeAllViews()
         col.addView(txt("WIDGET LAYOUT", AMBER, 22f))
-        col.addView(txt("Tick what to show. Use ▲ ▼ to reorder. Tiles fill two per row; make the widget taller on your home screen to fit more.", DIM, 12f))
+        col.addView(txt("Tick what to show. Bars, status chips, the OC panel and extra tiles keep the design order; ▲ ▼ reorders within each group. Make the widget taller to fit more.", DIM, 12f))
         state.forEachIndexed { i, (d, enabled) ->
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL; setPadding(0, 12, 0, 12) }
             row.addView(CheckBox(this).apply { text = d.title; setTextColor(PAPER); typeface = Typeface.MONOSPACE; isChecked = enabled

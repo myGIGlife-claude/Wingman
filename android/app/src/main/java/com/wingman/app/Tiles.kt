@@ -20,13 +20,14 @@ class TileDef(val id: String, val title: String)
 
 object Tiles {
     val ALL = listOf(
-        TileDef("name", "Name and faction"), TileDef("life", "Health"), TileDef("jail", "Jail status"), TileDef("hospital", "Hospital status"),
-        TileDef("oc", "OC timer"), TileDef("trip", "Trip: landing / leave by / fly by"), TileDef("stock", "Stock of your item"),
+        TileDef("life", "Health bar"), TileDef("energy", "Energy bar"), TileDef("nerve", "Nerve bar"),
+        TileDef("jail", "Jail status"), TileDef("hospital", "Hospital status"), TileDef("oc", "OC timer"),
+        TileDef("trip", "Trip: landing / leave by / fly by"), TileDef("stock", "Stock of your item"),
         TileDef("buymax", "Buy max"), TileDef("next", "Next step"), TileDef("cash", "Cash"),
-        TileDef("energy", "Energy"), TileDef("nerve", "Nerve"), TileDef("drug", "Drug cooldown"),
-        TileDef("booster", "Booster cooldown"), TileDef("medical", "Medical cooldown"),
+        TileDef("drug", "Drug cooldown"), TileDef("booster", "Booster cooldown"), TileDef("medical", "Medical cooldown"),
     )
-    const val DEFAULT = "name,life,energy,jail,hospital,oc"
+    val EXTRA = setOf("trip", "stock", "buymax", "next", "cash", "drug", "booster", "medical")
+    const val DEFAULT = "life,energy,jail,hospital,oc"
 
     private fun JSONObject.l(k: String): Long? = if (has(k) && !isNull(k)) getLong(k) else null
     private fun JSONObject.s(k: String): String? = if (has(k) && !isNull(k)) getString(k) else null
@@ -41,6 +42,8 @@ object Tiles {
             else -> if (left > 7200) GO else YELLOW
         }
     }
+
+    fun key(color: Int) = when (color) { GO -> "go"; YELLOW -> "yellow"; STOP -> "stop"; else -> "amber" }
 
     // Fly is blocked when the round trip plus the buffer no longer fits before the OC.
     fun flyBlocked(f: JSONObject, now: Long): Boolean = f.optBoolean("ocNow") || (f.l("flyOkUntil")?.let { now > it } ?: false)

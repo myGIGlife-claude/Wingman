@@ -1,15 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@drawable/widget_bg" android:orientation="vertical" android:padding="10dp">
-
-    <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:textColor="@color/dim" android:textSize="11sp" android:letterSpacing="0.12"
-        android:fontFamily="monospace" android:maxLines="1" android:ellipsize="end" android:paddingBottom="4dp" />
-
-    <LinearLayout android:id="@+id/rows" android:layout_width="match_parent" android:layout_height="0dp"
-        android:layout_weight="1" android:orientation="vertical" />
-
-    <LinearLayout android:id="@+id/buttons" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:paddingTop="6dp" />
-</LinearLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_bg" android:orientation="vertical" android:padding="14dp"><LinearLayout android:id="@+id/content" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/></LinearLayout>

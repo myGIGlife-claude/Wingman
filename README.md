@@ -31,3 +31,6 @@ You need a Google Cloud project with billing, Firestore (Native mode), Secret Ma
 `cd backend && npm test` (Node 24 runs the TypeScript tests directly). Android: `cd android && ./gradlew :app:assembleDebug`.
 
 Foreign stock data from YATA is player-reported and can be minutes old; the widget shows how old it is.
+
+## Credits
+Widget and app text use [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (SIL Open Font License 1.1). Foreign stock data from [YATA](https://yata.yt).
