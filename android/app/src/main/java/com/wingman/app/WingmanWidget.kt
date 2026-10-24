@@ -20,10 +20,13 @@ class WingmanWidget : AppWidgetProvider() {
     }
 
     companion object {
+        // Every widget type with the part of the model it draws.
+        private val KINDS = listOf(WingmanWidget::class.java to "all", StatusWidget::class.java to "status", OcWidget::class.java to "oc",
+            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions")
+
         fun updateAll(c: Context) {
             val m = AppWidgetManager.getInstance(c)
-            val ids = m.getAppWidgetIds(ComponentName(c, WingmanWidget::class.java))
-            ids.forEach { m.updateAppWidget(it, build(c)) }
+            for ((cls, kind) in KINDS) m.getAppWidgetIds(ComponentName(c, cls)).forEach { m.updateAppWidget(it, build(c, kind)) }
             scheduleRender(c)
         }
 
@@ -209,15 +212,15 @@ class WingmanWidget : AppWidgetProvider() {
         }
 
         // Shows when the data last changed, so a refresh tap visibly does something.
-        fun build(c: Context): RemoteViews {
-            val v = buildBody(c)
+        fun build(c: Context, kind: String = "all"): RemoteViews {
+            val v = buildBody(c, kind)
             val at = Prefs.get(c, "model_at").toLongOrNull()
-            if (at != null) v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
+            if (at != null && kind != "actions" && kind != "stock") v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
                 it.setTextViewText(R.id.u_text, "UPDATED ${Tiles.clock(at)}") })
             return v
         }
 
-        private fun buildBody(c: Context): RemoteViews {
+        private fun buildBody(c: Context, kind: String): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.widget)
             v.removeAllViews(R.id.content)
             val refresh = RemoteViews(c.packageName, R.layout.s_sq).also {
@@ -235,8 +238,30 @@ class WingmanWidget : AppWidgetProvider() {
             val add = { x: RemoteViews? -> if (x != null) v.addView(R.id.content, x) }
             val where = f.optString("where").ifEmpty { "?" }
 
+            if (kind == "status") {
+                statusSections(c, m, f, listOf("life", "energy", "nerve", "jail", "hospital"), now, refresh, add)
+                return v
+            }
+            if (kind == "oc") { add(panel(c, homeOc(f, now), now)); return v }
+            if (kind == "stock") { add(stockCard(c, f, now)); return v }
+            if (kind == "actions") { quickButtons(c, f, now, refresh, add); return v }
+            if (kind == "trip") {
+                val one = listOf("oc")
+                when (m.phase) { "traveling" -> travelingSections(c, m, f, one, now, refresh, add); "abroad" -> abroadSections(c, m, f, one, now, refresh, add); else -> homeTripSections(c, m, f, one, now, refresh, add) }
+                return v
+            }
             when (m.phase) {
-                "traveling" -> {
+                "traveling" -> travelingSections(c, m, f, ids, now, refresh, add)
+                "abroad" -> abroadSections(c, m, f, ids, now, refresh, add)
+                else -> { statusSections(c, m, f, ids, now, refresh, add); homeRestSections(c, m, f, ids, now, refresh, add) }
+            }
+            return v
+        }
+
+
+        private fun travelingSections(c: Context, m: Model, f: JSONObject, ids: List<String>, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            val where = f.optString("where").ifEmpty { "?" }
+
                     val out = f.optBoolean("outbound")
                     add(header(c, f, if (out) "IN FLIGHT" else "FLYING HOME", "amber"))
                     val land = f.optLong("landAt", 0); val dep = f.optLong("departedAt", 0)
@@ -247,8 +272,11 @@ class WingmanWidget : AppWidgetProvider() {
                         slackLabel = if (pct >= 0) f.optString("origin").takeIf { it.isNotEmpty() && it != "null" }?.uppercase() ?: if (out) "TORN" else "ABROAD" else null, slackValue = if (out) where.uppercase() else "TORN", slackPct = pct,
                         note = if (out && f.optString("item").isNotEmpty()) "Then: buy ${f.optString("item")}." + (if (lb > 0) " Must leave $where by ${Tiles.clock(lb)}." else "") else null), now))
                     add(row(c, 8, listOf(wbtn(c, "IN FLIGHT", "fly", "ghost", broadcast(c, ActionReceiver.ACTION_REFRESH, 0)), refresh)))
-                }
-                "abroad" -> {
+                        }
+
+        private fun abroadSections(c: Context, m: Model, f: JSONObject, ids: List<String>, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            val where = f.optString("where").ifEmpty { "?" }
+
                     add(header(c, f, "ABROAD · ${where.uppercase()}", "yellow"))
                     val lb = f.optLong("leaveBy", 0); val late = lb > 0 && lb - now < 600
                     add(panel(c, Panel(if (lb > 0) "LEAVE BY ${Tiles.clock(lb)}" else "LEAVE BY", "HOME ${Tiles.dur(f.optLong("flySecs"))}", if (late) "stop" else "yellow",
@@ -260,10 +288,13 @@ class WingmanWidget : AppWidgetProvider() {
                     if (m.showBought) items.add(RemoteViews(c.packageName, R.layout.s_wbtn_s).also {
                         it.setTextViewText(R.id.w_label, "BOUGHT"); it.setImageViewResource(R.id.w_icon, icon("check", "go")); it.setOnClickPendingIntent(R.id.wb, broadcast(c, ActionReceiver.ACTION_BOUGHT, 1)) })
                     items.add(refresh); add(row(c, 8, items))
-                }
-                else -> {
-                    val chipText = when (m.phase) { "hospital" -> "HOSPITAL"; "jail" -> "JAIL"; "federal" -> "FEDERAL"; else -> "HOME" }
-                    add(header(c, f, chipText, if (m.phase == "home") "go" else "stop"))
+                        }
+
+        // Header, bars and status chips for the home phase (also the Status widget).
+        private fun statusSections(c: Context, m: Model, f: JSONObject, ids: List<String>, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+
+                    val chipText = when (m.phase) { "hospital" -> "HOSPITAL"; "jail" -> "JAIL"; "federal" -> "FEDERAL"; "abroad" -> "ABROAD"; "traveling" -> "IN FLIGHT"; else -> "HOME" }
+                    add(header(c, f, chipText, when (m.phase) { "home" -> "go"; "abroad" -> "yellow"; "traveling" -> "amber"; else -> "stop" }))
                     // Bars: two per row.
                     val bars = ids.filter { it in listOf("life", "energy", "nerve") }.mapNotNull { id ->
                         val b = f.optJSONObject(id) ?: return@mapNotNull null
@@ -280,21 +311,37 @@ class WingmanWidget : AppWidgetProvider() {
                     if ("jail" in ids) { val u = f.optLong("jailUntil", 0); chips.add(if (u > now) chip(c, "JAIL", "stop", u, now) else chip(c, "JAIL · FREE", "go", null, now)) }
                     if ("hospital" in ids) { val u = f.optLong("hospitalUntil", 0); chips.add(if (u > now) chip(c, "HOSPITAL", "stop", u, now) else chip(c, "HOSPITAL · OK", "go", null, now)) }
                     if (chips.isNotEmpty()) add(row(c, 8, chips))
+        }
+
+        // Next trip from home: round trip, fly lock countdown and the Fly button.
+        private fun homeTripSections(c: Context, m: Model, f: JSONObject, ids: List<String>, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            add(header(c, f, if (m.phase == "home") "HOME" else m.phase.uppercase(), if (m.phase == "home") "go" else "stop"))
+            val dest = f.optString("target"); val fly = f.optLong("flySecs"); val ok = f.optLong("flyOkUntil", 0)
+            val slack = if (ok > 0) ok - now else null; val locked = Tiles.flyBlocked(f, now)
+            val color = if (slack == null) "amber" else if (slack > 7200) "go" else if (slack > 0) "yellow" else "stop"
+            val a = Cell("ROUND TRIP", null, "amber", Tiles.dur(fly * 2), "to $dest and back")
+            val b = when { slack == null -> Cell("FLY WINDOW", null, "go", "OPEN", "no OC clock"); slack > 0 -> Cell("FLY LOCKS IN", ok, color, sub = "trip + ${f.optLong("flyBufferSecs") / 60}m buffer"); else -> Cell("FLY", null, "stop", "LOCKED", "stay in Torn") }
+            add(panel(c, Panel("NEXT TRIP · ${dest.uppercase()}", null, color, a, b), now))
+            val tap = Notifier.openIntent(c, "https://www.torn.com/travelagency.php", 30, if (ok > 0) ok else 0)
+            add(row(c, 8, listOf(wbtn(c, if (locked) "FLY LOCKED" else "FLY TO ${dest.uppercase()}", if (locked) "lock" else "fly", if (locked) "ghost" else "amber", tap), refresh)))
+        }
+
+        // The rest of the combined home view: OC panel, extra tiles and quick buttons.
+        private fun homeRestSections(c: Context, m: Model, f: JSONObject, ids: List<String>, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
                     if ("oc" in ids) add(panel(c, homeOc(f, now), now))
                     // Extra tiles, two per row.
                     ids.filter { it in Tiles.EXTRA }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
-                    // Quick buttons.
-                    val on = Prefs.get(c, "buttons").ifEmpty { Tiles.DEFAULT_BUTTONS }.split(',')
-                    val qs = Tiles.BUTTONS.filter { it.id in on }.mapIndexed { i, b ->
-                        val locked = b.id == "fly" && Tiles.flyBlocked(f, now)
-                        val before = if (b.id == "fly") f.optLong("flyOkUntil", 0) else 0
-                        qbtn(c, b.label, when (b.id) { "fly" -> "fly"; "gym" -> "zap"; "crimes" -> "target"; else -> "box" }, locked, Notifier.openIntent(c, b.url, 20 + i, before))
-                    }
-                    if (qs.isNotEmpty()) add(row(c, 8, qs + refresh))
-                    else add(row(c, 8, listOf(refresh)))
-                }
+                    quickButtons(c, f, now, refresh, add)
+        }
+
+        private fun quickButtons(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            val on = Prefs.get(c, "buttons").ifEmpty { Tiles.DEFAULT_BUTTONS }.split(',')
+            val qs = Tiles.BUTTONS.filter { it.id in on }.mapIndexed { i, b ->
+                val locked = b.id == "fly" && Tiles.flyBlocked(f, now)
+                val before = if (b.id == "fly") f.optLong("flyOkUntil", 0) else 0
+                qbtn(c, b.label, when (b.id) { "fly" -> "fly"; "gym" -> "zap"; "crimes" -> "target"; else -> "box" }, locked, Notifier.openIntent(c, b.url, 20 + i, before))
             }
-            return v
+            add(row(c, 8, if (qs.isNotEmpty()) qs + refresh else listOf(refresh)))
         }
 
         private fun homeOc(f: JSONObject, now: Long): Panel {

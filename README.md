@@ -181,8 +181,19 @@ curl -s -X POST -H "X-Tick-Key: $TICK" "$URL/tick"; echo
 7. Open **Tools** and tap **Test notification (this phone)**. If nothing appears, see [Troubleshooting](#troubleshooting).
 8. In **Tools**, tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
 
-### 12. Add the widget
-Long-press your home screen, tap **Widgets**, find **Wingman** and place it. Make it tall: stretch it vertically to fit more. The layout editor opens so you can choose what to show (you can reopen it any time from the app's **Widget layout** button).
+### 12. Add the widgets
+Long-press your home screen, tap **Widgets** and find **Wingman**. There are six, so use only the ones you want:
+
+| Widget | Shows | Good size |
+|---|---|---|
+| **Wingman** (all-in-one) | Everything, in a layout you choose | tall, 4 wide |
+| **Wingman · Status** | Name, faction, health, energy, nerve, jail and hospital | 4×3 |
+| **Wingman · OC** | OC timer and when the fly window closes | 4×3 |
+| **Wingman · Trip** | Landing, leave-by and OC timers, the next trip, and the Fly or Buy button | 4×4 |
+| **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
+| **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
+
+The all-in-one widget opens a layout editor when you add it (reopen it any time from the app's **Widget layout** button).
 
 ### 13. Optional: the Torn PDA userscript
 In Torn PDA, add `userscript/wingman.user.js` as a user script. It pre-fills the quantity box on the foreign shop. It never presses Buy. In its ⚙ panel you can enter your service URL and app secret to keep settings in sync with the app.

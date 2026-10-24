@@ -38,6 +38,32 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
         </receiver>
 
+
+        <receiver android:name=".StatusWidget" android:exported="true" android:label="@string/label_status">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_status" />
+        </receiver>
+
+        <receiver android:name=".OcWidget" android:exported="true" android:label="@string/label_oc">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_oc" />
+        </receiver>
+
+        <receiver android:name=".TripWidget" android:exported="true" android:label="@string/label_trip">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_trip" />
+        </receiver>
+
+        <receiver android:name=".StockWidget" android:exported="true" android:label="@string/label_stock">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stock" />
+        </receiver>
+
+        <receiver android:name=".ActionsWidget" android:exported="true" android:label="@string/label_actions">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_actions" />
+        </receiver>
+
         <receiver android:name=".ActionReceiver" android:exported="false" />
 
         <service android:name=".WingmanMessaging" android:exported="false">

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="label_status">Wingman · Status</string>
+    <string name="desc_status">Name, faction, health, energy, nerve, jail and hospital</string>
+    <string name="label_oc">Wingman · OC</string>
+    <string name="desc_oc">OC timer and when the fly window closes</string>
+    <string name="label_trip">Wingman · Trip</string>
+    <string name="desc_trip">Landing, leave-by and the next trip with the Fly button</string>
+    <string name="label_stock">Wingman · Stock</string>
+    <string name="desc_stock">Your item\'s stock, price and restock estimate</string>
+    <string name="label_actions">Wingman · Actions</string>
+    <string name="desc_actions">Fly, Gym, Crimes and Items buttons</string>
+</resources>
