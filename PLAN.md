@@ -4,14 +4,15 @@ Last updated: 2026-10-24 00:20 UTC
 Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/wingman-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
-infra: secrets (blocked by classifier, ask Jonathan), Firebase, deploy.
+Android app (widget, FCM, settings, CI).
 
 ## Tasks
 - [x] Backend: plan.ts + tests (11 pass)
 - [x] Backend: clients, model, events, tick, routes, Dockerfile (tsc + 15 tests pass; not run live)
 - [x] Userscript v1.1 written (syntax-checked only; shop-page selectors unverified)
 - [ ] Android app (widget, FCM, settings, CI workflow)
-- [ ] infra: secrets, registry, bucket done. BLOCKED on IAM roles for the Cloud Run runtime account (Jonathan, console). Then build image, deploy Cloud Run, scheduler, Firebase app
+- [x] infra: backend deployed (Cloud Run wingman-backend, scheduler wingman-tick every min, secrets). Verified live: /tick 200, phase=home
+- [ ] Firebase: add Android app com.wingman.app, get google-services.json (blocked: needs Firebase access, check)
 - [ ] README (phone-friendly setup)
 
 ## Decisions
