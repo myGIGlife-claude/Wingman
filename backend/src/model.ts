@@ -1,5 +1,6 @@
 // Widget model (spec section 8). Only ever links to Torn pages; the player taps the real button.
 import type { Cfg } from './plan.ts';
+import type { Eta } from './restock.ts';
 
 const TORN = 'https://www.torn.com';
 export interface Primary { label: string; url: string | null; style: 'amber' | 'ghost' | 'stop' }
@@ -16,6 +17,7 @@ export interface Facts {
   energy: Bar | null; nerve: Bar | null; cooldowns: { drug: number | null; booster: number | null; medical: number | null };
   cash: number | null; landAt: number | null; departedAt: number | null; outbound: boolean | null; where: string | null; leaveBy: number | null; flyBy: number | null;
   flySecs: number; target: string; item: string; stock: { qty: number; cost: number; seen: number | null } | null;
+  restock: { eta: number | null; overdue: boolean; everySecs: number | null; samples: number; soldOutAt: number | null } | null;
   buyMax: number | null; buyWhy: string | null; next: string | null; bought: boolean; fits: boolean | null;
 }
 interface Bar { cur: number; max: number; fullAt: number | null }
@@ -33,7 +35,7 @@ export function buyLabel(p: any): string {
   return b?.why === 'cash' ? 'NOT ENOUGH CASH' : `BUY MAX (${b?.n ?? 0})`;
 }
 
-export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean): Facts {
+export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta): Facts {
   const t: number = p.t;
   const bar = (b: any): Bar | null => b && b.maximum ? { cur: b.current, max: b.maximum, fullAt: b.fulltime ? t + b.fulltime : null } : null;
   const cd = (s: unknown) => (typeof s === 'number' && s > 0 ? t + s : null);
@@ -52,12 +54,13 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean): Facts {
     landAt: p.landAt ?? null, departedAt: typeof user?.travel?.departed === 'number' && user.travel.departed > 0 ? user.travel.departed : null, outbound: p.phase === 'traveling' ? !!p.outbound : null, where: abroad ? p.here?.name ?? null : p.where ?? null,
     leaveBy: p.leaveBy ?? null, flyBy: p.flyBy ?? null, flySecs: abroad ? p.flyBack : p.fly, target: p.target.name, item: cfg.item,
     stock: p.stock ? { qty: p.stock.qty, cost: p.stock.cost, seen: p.stock.update ?? null } : null,
+    restock: rs ? { eta: rs.eta, overdue: rs.overdue, everySecs: rs.every, samples: rs.samples, soldOutAt: rs.soldOutAt } : null,
     buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
     next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,
   };
 }
 
-export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any): Widget {
+export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any, rs?: Eta): Widget {
   const t: number = p.t, tz = cfg.tz;
   const w: Widget = { phase: p.phase, title: '', countdownTo: null, countdownLabel: '', sub: '', primary: { label: 'WAITING', url: null, style: 'ghost' }, showBought: false, updatedAt: t };
 
@@ -94,6 +97,6 @@ export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, 
       if (soonest) { w.countdownTo = soonest.at; w.countdownLabel = soonest.id.toUpperCase(); }
     }
   }
-  w.facts = factsOf(p, cfg, user, bought);
+  w.facts = factsOf(p, cfg, user, bought, rs);
   return w;
 }

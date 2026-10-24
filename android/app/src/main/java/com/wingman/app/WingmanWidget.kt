@@ -85,8 +85,21 @@ class WingmanWidget : AppWidgetProvider() {
             return v
         }
 
-        private class Panel(val label: String, val chip: String?, val color: String, val timerTo: Long?, val text: String = "—", val sub: String = "",
+        private class Cell(val label: String, val timerTo: Long?, val color: String, val text: String = "—", val sub: String = "")
+        private class Panel(val label: String, val chip: String?, val color: String, val a: Cell, val b: Cell? = null,
                             val slackLabel: String? = null, val slackValue: String = "", val slackPct: Int = 0, val note: String? = null)
+
+        private fun cell(v: RemoteViews, p: String, c: Cell?, now: Long, size: Float) {
+            val ids = if (p == "a") intArrayOf(R.id.cellA, R.id.a_label, R.id.a_clock, R.id.a_text, R.id.a_sub) else intArrayOf(R.id.cellB, R.id.b_label, R.id.b_clock, R.id.b_text, R.id.b_sub)
+            if (c == null) { v.setViewVisibility(ids[0], View.GONE); return }
+            // A timer past 24h also shows days, which a 100:27:41 clock hides.
+            val left = if (c.timerTo != null) c.timerTo - now else 0
+            v.setTextViewText(ids[1], if (left >= 86400) "${c.label} · ${Tiles.long(left)}" else c.label)
+            v.setTextViewTextSize(ids[2], android.util.TypedValue.COMPLEX_UNIT_SP, size); v.setTextViewTextSize(ids[3], android.util.TypedValue.COMPLEX_UNIT_SP, size)
+            if (c.timerTo != null && left > 0) { v.setTextColor(ids[2], rgb(c.color)); countdown(v, ids[2], left) }
+            else { v.setViewVisibility(ids[2], View.GONE); v.setViewVisibility(ids[3], View.VISIBLE); v.setTextViewText(ids[3], if (c.timerTo != null) "NOW" else c.text); v.setTextColor(ids[3], rgb(if (c.timerTo != null) c.color else "dim")) }
+            if (c.sub.isEmpty()) v.setViewVisibility(ids[4], View.GONE) else v.setTextViewText(ids[4], c.sub)
+        }
 
         private fun panel(c: Context, p: Panel, now: Long): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.s_panel)
@@ -94,19 +107,22 @@ class WingmanWidget : AppWidgetProvider() {
             v.setTextViewText(R.id.p_label, p.label)
             if (p.chip != null) { v.setTextViewText(R.id.p_chip, "● ${p.chip}"); v.setTextColor(R.id.p_chip, rgb(p.color)); v.setInt(R.id.p_chip, "setBackgroundResource", chipBg(p.color)) }
             else v.setViewVisibility(R.id.p_chip, View.GONE)
-            if (p.timerTo != null && p.timerTo > now) {
-                v.setTextColor(R.id.clock, rgb(p.color)); countdown(v, R.id.clock, p.timerTo - now)
-            } else {
-                v.setViewVisibility(R.id.clock, View.GONE); v.setViewVisibility(R.id.clock_text, View.VISIBLE)
-                v.setTextViewText(R.id.clock_text, if (p.timerTo != null) "NOW" else p.text)
-            }
-            if (p.sub.isEmpty()) v.setViewVisibility(R.id.p_sub, View.GONE) else v.setTextViewText(R.id.p_sub, p.sub)
+            val dual = p.b != null
+            cell(v, "a", p.a, now, if (dual) 20f else 30f); cell(v, "b", p.b, now, 20f)
             if (p.slackLabel == null) v.setViewVisibility(R.id.p_slack, View.GONE) else {
-                v.setTextViewText(R.id.p_sl, p.slackLabel); v.setTextViewText(R.id.p_sv, p.slackValue); v.setTextColor(R.id.p_sv, rgb(p.color))
+                if (dual && p.slackValue.isEmpty()) v.setViewVisibility(R.id.p_slack_labels, View.GONE)
+                else { v.setTextViewText(R.id.p_sl, p.slackLabel); v.setTextViewText(R.id.p_sv, p.slackValue); v.setTextColor(R.id.p_sv, rgb(p.color)) }
                 setBar(v, PB, p.color, p.slackPct)
             }
             if (p.note == null) v.setViewVisibility(R.id.p_note, View.GONE) else v.setTextViewText(R.id.p_note, p.note)
             return v
+        }
+
+        private fun ocCell(f: JSONObject, now: Long): Cell {
+            val at = f.optLong("ocReadyAt", 0); val name = f.optString("ocName").takeIf { it != "null" }.orEmpty()
+            return if (f.optBoolean("ocNow")) Cell("OC", null, "go", "READY", name)
+            else if (at > 0) Cell("OC READY IN", at, Tiles.key(Tiles.ocColor(f, at, now)), sub = name)
+            else Cell("OC", null, "dim", "—", "Not in an OC")
         }
 
         private fun ocMini(c: Context, f: JSONObject, now: Long): RemoteViews? {
@@ -121,19 +137,33 @@ class WingmanWidget : AppWidgetProvider() {
 
         private fun stockCard(c: Context, f: JSONObject, now: Long): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.s_stock)
-            val st = f.optJSONObject("stock")
+            val st = f.optJSONObject("stock"); val rs = f.optJSONObject("restock")
             v.setTextViewText(R.id.k_label, f.optString("item").ifEmpty { "ITEM" }.uppercase())
+            val q = st?.getInt("qty")
             if (st == null) { v.setTextViewText(R.id.k_qty, "?"); v.setTextColor(R.id.k_qty, DIM); v.setTextViewText(R.id.k_sub, "no stock data") }
             else {
-                val q = st.getInt("qty")
                 v.setTextViewText(R.id.k_qty, "%,d".format(q)); v.setTextColor(R.id.k_qty, if (q == 0) STOP else GO); v.setTextViewText(R.id.k_unit, "in stock")
-                val seen = if (st.has("seen") && !st.isNull("seen")) " · seen ${(now - st.getLong("seen")) / 60}m ago" else ""
-                v.setTextViewText(R.id.k_sub, "${Tiles.money(st.getLong("cost"))} each$seen")
+                val seen = if (st.has("seen") && !st.isNull("seen")) "seen ${(now - st.getLong("seen")) / 60}m ago" else ""
+                val gone = rs?.takeIf { q == 0 && it.has("soldOutAt") && !it.isNull("soldOutAt") }?.let { "sold out ${Tiles.dur(now - it.getLong("soldOutAt"))} ago · " } ?: ""
+                v.setTextViewText(R.id.k_sub, if (q == 0) "$gone$seen" else "${Tiles.money(st.getLong("cost"))} each · $seen")
             }
-            v.setTextViewText(R.id.k_rl, "BUY MAX")
-            val n = if (f.has("buyMax") && !f.isNull("buyMax")) f.getInt("buyMax") else null
-            v.setTextViewText(R.id.k_rv, n?.toString() ?: "—")
-            v.setTextViewText(R.id.k_rs, if (f.optString("buyWhy") == "cash") "not enough cash" else if (!f.isNull("cash")) "cash ${Tiles.money(f.getLong("cash"))}" else "")
+            if (q == 0) {
+                // Sold out: show the learned restock estimate instead of buy max.
+                v.setTextViewText(R.id.k_rl, "RESTOCK ETA (EST.)")
+                val eta = rs?.takeIf { it.has("eta") && !it.isNull("eta") }?.getLong("eta") ?: 0L
+                val every = rs?.takeIf { it.has("everySecs") && !it.isNull("everySecs") }?.getLong("everySecs")
+                if (eta > now) { v.setViewVisibility(R.id.k_rv, View.GONE); v.setViewVisibility(R.id.k_rt, View.VISIBLE); countdown(v, R.id.k_rt, eta - now) }
+                else v.setTextViewText(R.id.k_rv, if (rs?.optBoolean("overdue") == true) "DUE" else "—")
+                v.setTextViewText(R.id.k_rs, when {
+                    every != null -> "restocks ~every ${Tiles.dur(every)}"
+                    else -> "learning · ${rs?.optInt("samples") ?: 0}/1 gaps seen"
+                })
+            } else {
+                v.setTextViewText(R.id.k_rl, "BUY MAX")
+                val n = if (f.has("buyMax") && !f.isNull("buyMax")) f.getInt("buyMax") else null
+                v.setTextViewText(R.id.k_rv, n?.toString() ?: "—")
+                v.setTextViewText(R.id.k_rs, if (f.optString("buyWhy") == "cash") "not enough cash" else if (!f.isNull("cash")) "cash ${Tiles.money(f.getLong("cash"))}" else "")
+            }
             return v
         }
 
@@ -187,7 +217,7 @@ class WingmanWidget : AppWidgetProvider() {
             val now = System.currentTimeMillis() / 1000
             val f = m?.facts
             if (m == null || f == null) {
-                v.addView(R.id.content, panel(c, Panel("WINGMAN", null, "amber", null, text = "SET UP", sub = if (m == null) "Open the app and add your backend URL" else m.sub), now))
+                v.addView(R.id.content, panel(c, Panel("WINGMAN", null, "amber", Cell("STATUS", null, "amber", "SET UP", if (m == null) "Open the app and add your backend URL" else m.sub)), now))
                 val open = PendingIntent.getActivity(c, 9, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
                 v.addView(R.id.content, row(c, 8, listOf(wbtn(c, "OPEN WINGMAN", "fly", "amber", open), refresh)))
                 return v
@@ -203,17 +233,18 @@ class WingmanWidget : AppWidgetProvider() {
                     val land = f.optLong("landAt", 0); val dep = f.optLong("departedAt", 0)
                     val pct = if (dep in 1 until land) ((now - dep) * 100 / (land - dep)).toInt() else -1
                     val lb = f.optLong("leaveBy", 0)
-                    add(panel(c, Panel(if (out) "LANDS IN ${where.uppercase()}" else "LANDS HOME", if (land > 0) "at ${Tiles.clock(land)}" else null, "amber", land.takeIf { it > 0 },
+                    add(panel(c, Panel(if (out) "LANDS IN ${where.uppercase()}" else "LANDS HOME", if (land > 0) "at ${Tiles.clock(land)}" else null, "amber",
+                        Cell("LANDS", land.takeIf { it > 0 }, "amber", sub = if (land > 0) Tiles.clock(land) else ""), if ("oc" in ids) ocCell(f, now) else null,
                         slackLabel = if (pct >= 0) (if (out) "TORN" else where.uppercase()) else null, slackValue = if (out) where.uppercase() else "TORN", slackPct = pct,
                         note = if (out && f.optString("item").isNotEmpty()) "Then: buy ${f.optString("item")}." + (if (lb > 0) " Must leave $where by ${Tiles.clock(lb)}." else "") else null), now))
-                    add(ocMini(c, f, now))
                     add(row(c, 8, listOf(wbtn(c, "IN FLIGHT", "fly", "ghost", broadcast(c, ActionReceiver.ACTION_REFRESH, 0)), refresh)))
                 }
                 "abroad" -> {
                     add(header(c, f, "ABROAD · ${where.uppercase()}", "yellow"))
                     val lb = f.optLong("leaveBy", 0); val late = lb > 0 && lb - now < 600
-                    add(panel(c, Panel(if (lb > 0) "LEAVE BY ${Tiles.clock(lb)}" else "LEAVE BY", "HOME ${Tiles.dur(f.optLong("flySecs"))}", if (late) "stop" else "yellow", lb.takeIf { it > 0 }), now))
-                    add(stockCard(c, f, now)); add(ocMini(c, f, now))
+                    add(panel(c, Panel(if (lb > 0) "LEAVE BY ${Tiles.clock(lb)}" else "LEAVE BY", "HOME ${Tiles.dur(f.optLong("flySecs"))}", if (late) "stop" else "yellow",
+                        Cell("LEAVE BY", lb.takeIf { it > 0 }, if (late) "stop" else "yellow", sub = if (lb > 0) Tiles.clock(lb) else ""), if ("oc" in ids) ocCell(f, now) else null), now))
+                    add(stockCard(c, f, now))
                     val main = wbtn(c, m.label, if (m.label.startsWith("BUY")) "cart" else "fly", m.style,
                         if (m.url != null) Notifier.openIntent(c, m.url, 3) else broadcast(c, ActionReceiver.ACTION_REFRESH, 0))
                     val items = mutableListOf(main)
@@ -258,18 +289,21 @@ class WingmanWidget : AppWidgetProvider() {
         }
 
         private fun homeOc(f: JSONObject, now: Long): Panel {
-            val at = f.optLong("ocReadyAt", 0); val name = listOf(f.optString("ocName"), f.optString("ocStatus")).filter { it.isNotEmpty() && it != "null" }.joinToString(" · ")
-            if (f.optBoolean("ocNow")) return Panel("OC", "OC READY", "go", null, text = "READY", sub = name)
-            if (at == 0L) return Panel("OC", null, "amber", null, text = "—", sub = if (name.isEmpty()) "Not in an OC" else "$name · no time yet")
+            val at = f.optLong("ocReadyAt", 0)
+            val oc = ocCell(f, now)
+            if (f.optBoolean("ocNow") || at == 0L) return Panel("OC", if (f.optBoolean("ocNow")) "OC READY" else null, if (f.optBoolean("ocNow")) "go" else "amber", oc)
             val color = Tiles.key(Tiles.ocColor(f, at, now))
             val ok = f.optLong("flyOkUntil", 0); val slack = if (ok > 0) ok - now else null
             val buf = f.optLong("flyBufferSecs") / 60
             val chip = when { slack == null -> null; slack > 7200 -> "FLY WINDOW OPEN"; slack > 0 -> "FLY WINDOW CLOSING"; else -> "FLY LOCKED" }
             val pct = if (slack == null) 0 else (sqrt((slack.coerceAtLeast(0)).toDouble() / (4 * 86400)) * 100).toInt().coerceIn(2, 100)
-            return Panel("OC READY IN", chip, color, at, sub = name,
-                slackLabel = when { slack == null -> null; slack > 0 -> "FLY LOCKS IN"; else -> "FLY LOCKED FOR" },
-                slackValue = if (slack != null && slack > 0) Tiles.dur(slack) else "ROUND TRIP + ${buf}M", slackPct = pct,
-                note = if (slack != null && slack <= 0) "A round trip plus the $buf minute buffer no longer fits before your OC. Stay in Torn." else null)
+            val fly = when {
+                slack == null -> null
+                slack > 0 -> Cell("FLY LOCKS IN", ok, color, sub = "trip + ${buf}m buffer")
+                else -> Cell("FLY", null, "stop", "LOCKED", "stay in Torn")
+            }
+            return Panel("OC", chip, color, oc, fly, slackLabel = if (slack == null) null else "", slackPct = pct,
+                note = if (slack != null && slack <= 0) "A round trip plus the $buf minute buffer no longer fits before your OC." else null)
         }
     }
 }

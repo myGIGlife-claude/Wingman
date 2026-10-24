@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/wb" android:layout_width="wrap_content" android:layout_height="52dp" android:orientation="horizontal" android:gravity="center" android:paddingLeft="16dp" android:paddingRight="16dp" android:background="@drawable/btn_go_outline">
 <ImageView android:id="@+id/w_icon" android:layout_width="18dp" android:layout_height="18dp" android:layout_marginRight="8dp"/>
-<TextView android:id="@+id/w_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/go" android:fontFamily="@font/jetbrains_mono_bold" android:includeFontPadding="false" android:letterSpacing="0.08"/></LinearLayout>
+<TextView android:id="@+id/w_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="@color/go" android:fontFamily="monospace" android:textStyle="bold" android:includeFontPadding="false" android:letterSpacing="0.08"/></LinearLayout>

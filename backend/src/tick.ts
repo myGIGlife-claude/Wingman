@@ -6,6 +6,7 @@ import { diffEvents, type Evt } from './events.ts';
 import { getSettings, getState, saveState } from './store.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent } from './logic.ts';
+import { observe, estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
 
@@ -55,6 +56,14 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     if (l) { st.learned = { ...st.learned, [l.key]: l.secs }; p = plan(user, oc, cfg, st, t); }
   }
 
+  // Learn restock rhythm for the chosen item from new stock reports.
+  const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
+  const hist = { ...(st.hist ?? {}) };
+  for (const [cc, c] of Object.entries<any>(st.yata?.stocks ?? {})) {
+    for (const it of c.stocks ?? []) { const k = `${cc}:${String(it.name).toLowerCase()}`; hist[k] = observe(hist[k], it.quantity, c.update); }
+  }
+  const rs = hk ? estimate(hist[hk], t) : undefined;
+
   const phaseChanged = p.phase !== st.phase;
   const landedCash = phaseChanged ? (p.phase === 'abroad' ? user.money_onhand : null) : st.landedCash;
   let bought = nextBought({ prevBought: !!st.bought, phaseChanged, abroad: p.phase === 'abroad', cost: p.stock?.cost, landedCash, cash: user.money_onhand });
@@ -63,13 +72,13 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   const sent = pruneSent(st.sent, wall, SENT_TTL);
   const events: Evt[] = diffEvents(prev, p, cfg, bought).filter(e => !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user);
+  const model = widgetModel(p, cfg, bought, user, rs);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(model, events); } catch (e) {
       // Keep the old phase/model so the same events and widget update are tried again next tick.
       console.error('push failed', e);
-      await saveState({ ...st, yata: st.yata, learned: st.learned });
+      await saveState({ ...st, yata: st.yata, learned: st.learned, hist });
       return { ok: false, phase: p.phase, note: 'push failed' };
     }
   }
@@ -82,7 +91,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, snapshot: { user, oc },
+    landedCash: landedCash ?? null, bought, sent, model, hist, snapshot: { user, oc },
   });
   return { ok: true, phase: p.phase };
 }
@@ -91,5 +100,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
 export async function currentModel(key: string): Promise<Widget> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
   const [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
-  return widgetModel(plan(user, oc, cfg, st, user.timestamp), cfg, !!st.bought, user);
+  const p = plan(user, oc, cfg, st, user.timestamp);
+  const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
+  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined);
 }

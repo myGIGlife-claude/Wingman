@@ -33,4 +33,4 @@ You need a Google Cloud project with billing, Firestore (Native mode), Secret Ma
 Foreign stock data from YATA is player-reported and can be minutes old; the widget shows how old it is.
 
 ## Credits
-Widget and app text use [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (SIL Open Font License 1.1). Foreign stock data from [YATA](https://yata.yt).
+Foreign stock data from [YATA](https://yata.yt). Restock estimates are learned from the stock changes Wingman sees, so they improve over time.
