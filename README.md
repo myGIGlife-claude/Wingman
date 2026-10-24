@@ -227,11 +227,11 @@ Everything is designed to fit inside Google's free tiers for one player: about 1
 ## Develop
 
 ```bash
-cd backend && npm ci && npm test        # 26 tests; Node 22+
-cd android && ./gradlew :app:assembleDebug
+cd backend && npm ci && npm test        # Node 22+
+cd android && ./gradlew :app:testDebugUnitTest :app:assembleDebug
 ```
 
-- Planning logic is in `backend/src/plan.ts`, with tests in `plan.test.ts`.
+- Planning logic is in `backend/src/plan.ts`, with tests in `plan.test.ts`. The fly lock and OC colors on the phone are tested in `android/app/src/test`.
 - Releases are tagged (`v1.5.1` and so on). The app shows its version on the settings screen.
 - The Cloud Shell commands in the setup steps follow the same sequence the original deployment used, but that deployment was done through Google's APIs, so these exact `gcloud` commands have not been run end to end. If one fails or differs on your account, please open an issue.
 - `infra/` holds the scripts used to set up the original deployment through Google's APIs. They need a service account key, so the steps above are simpler for most people.

@@ -67,3 +67,11 @@ test('status alerts fire on flips only, and the switches decide', () => {
   assert.equal(alertOn({ alerts: { energy_full: true } }, 'energy_full'), true);
   assert.deepEqual(san({ alerts: { energy_full: true, nope: true, oc_ready: 'x' } }).alerts, { energy_full: true });
 });
+
+import { sameState } from './logic.ts';
+test('sameState ignores the model timestamp but sees real changes', () => {
+  const a = { phase: 'home', model: { updatedAt: 1, title: 'HOME' } };
+  assert.equal(sameState(a, { phase: 'home', model: { updatedAt: 99, title: 'HOME' } }), true);
+  assert.equal(sameState(a, { phase: 'home', model: { updatedAt: 1, title: 'AWAY' } }), false);
+  assert.equal(sameState(a, { phase: 'abroad', model: { updatedAt: 1, title: 'HOME' } }), false);
+});

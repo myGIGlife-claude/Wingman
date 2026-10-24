@@ -11,8 +11,8 @@ android {
         applicationId = "com.wingman.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "1.6.2"
+        versionCode = 15
+        versionName = "1.6.3"
     }
 }
 
@@ -21,4 +21,6 @@ dependencies {
     implementation(libs.firebase.messaging)
     implementation(libs.work)
     implementation(libs.core.ktx)
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

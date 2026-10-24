@@ -6,7 +6,7 @@ import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
 import { alertOn } from './settings.ts';
 import { getSettings, getState, saveState, setYata } from './store.ts';
 import { push } from './fcm.ts';
-import { nextBought, pruneSent } from './logic.ts';
+import { nextBought, pruneSent, sameState } from './logic.ts';
 import { observe, estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
@@ -93,12 +93,14 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   // A BOUGHT tap that landed while this tick ran must not be overwritten.
   if (bought === !!st.bought) bought = !!(await getState()).bought;
 
-  await saveState({
+  const next = {
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, hist, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null, snapshot: { user, oc },
-  });
+    landedCash: landedCash ?? null, bought, sent, model, hist, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
+  };
+  delete (next as any).snapshot; // old versions stored the raw Torn profile here; nothing reads it
+  if (!sameState(next, st)) await saveState(next); // skip rewriting identical state
   return { ok: true, phase: p.phase };
 }
 

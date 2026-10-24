@@ -10,3 +10,9 @@ export function nextBought(x: { prevBought: boolean; phaseChanged: boolean; abro
 export function pruneSent(sent: Record<string, number> | undefined, now: number, ttl: number): Record<string, number> {
   return Object.fromEntries(Object.entries(sent ?? {}).filter(([, v]) => v > now - ttl));
 }
+
+// True when saving would only rewrite the same state. The model's updatedAt changes every tick, so it is ignored.
+export function sameState(a: any, b: any): boolean {
+  const norm = (x: any) => JSON.stringify({ ...x, model: x?.model && { ...x.model, updatedAt: 0 } });
+  return norm(a) === norm(b);
+}

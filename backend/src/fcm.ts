@@ -1,4 +1,5 @@
 import './firebase.ts';
+import { getApp } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import { listDevices, removeDevice } from './store.ts';
 import type { Widget } from './model.ts';
@@ -18,7 +19,7 @@ export async function push(model: Widget | undefined, alerts: { text: string; ur
   let failed = 0;
   res.responses.forEach((r, i) => {
     if (!r.error) return;
-    console.error('fcm send failed', r.error.code);
+    console.error('fcm send failed', r.error.code, r.error.message, 'project=', getApp().options.projectId);
     if (r.error.code === 'messaging/registration-token-not-registered') removeDevice(msgs[i].token).catch(() => {});
     else failed++;
   });

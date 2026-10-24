@@ -19,12 +19,14 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '21' }
       - name: Add google-services.json
-        run: echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON_B64" ]; then echo "::error::Add the GOOGLE_SERVICES_JSON_B64 repository secret first (see README step 10)."; exit 1; fi
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > android/app/google-services.json
         env:
           GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
-      - name: Build debug APK
+      - name: Test and build debug APK
         working-directory: android
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: wingman-debug-apk

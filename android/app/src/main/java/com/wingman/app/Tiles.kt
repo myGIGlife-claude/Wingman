@@ -1,20 +1,19 @@
 package com.wingman.app
 
-import android.graphics.Color
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 // One cell of the widget. Shows a live countdown when timerTo is in the future, otherwise the text.
-data class Tile(val label: String, val text: String = "", val timerTo: Long? = null, val sub: String = "", val color: Int = AMBER, val full: Boolean = false)
+data class Tile(val label: String, val text: String = "", val timerTo: Long? = null, val sub: String = "", val color: Int = AMBER)
 
-val AMBER = Color.parseColor("#FFB627")
-val GO = Color.parseColor("#B5E35C")
-val STOP = Color.parseColor("#FF5F3C")
-val PAPER = Color.parseColor("#EDE7D3")
-val DIM = Color.parseColor("#B0A88F")
-val YELLOW = Color.parseColor("#FFD23F")
+val AMBER = 0xFFFFB627.toInt()
+val GO = 0xFFB5E35C.toInt()
+val STOP = 0xFFFF5F3C.toInt()
+val PAPER = 0xFFEDE7D3.toInt()
+val DIM = 0xFFB0A88F.toInt()
+val YELLOW = 0xFFFFD23F.toInt()
 
 class TileDef(val id: String, val title: String)
 
@@ -57,12 +56,6 @@ object Tiles {
     }
 
     fun build(id: String, f: JSONObject, now: Long): Tile? = when (id) {
-        "oc" -> {
-            val at = f.l("ocReadyAt"); val name = f.s("ocName"); val sub = listOfNotNull(name, f.s("ocStatus")).joinToString(" · ").ifEmpty { "No OC" }
-            if (f.optBoolean("ocNow")) Tile("OC", "READY", sub = sub, color = GO, full = true)
-            else if (at != null) Tile("OC READY IN", timerTo = at, sub = sub, color = ocColor(f, at, now), full = true)
-            else Tile("OC", "—", sub = if (name != null) "$sub · no time yet" else sub, color = DIM, full = true)
-        }
         "trip" -> when (f.optString("phase")) {
             "traveling" -> {
                 val to = f.l("landAt"); val where = f.s("where")
@@ -97,19 +90,8 @@ object Tiles {
             if (n == null) Tile("BUY MAX", "—", sub = "when abroad", color = DIM)
             else Tile("BUY MAX", n.toString(), sub = if (f.s("buyWhy") == "cash") "not enough cash" else cash, color = if (n > 0) GO else STOP)
         }
-        "name" -> Tile(f.s("faction")?.uppercase() ?: "NO FACTION", f.s("name") ?: "—", color = PAPER, full = true)
-        "life" -> f.optJSONObject("life")?.let {
-            val cur = it.getInt("cur"); val max = it.getInt("max"); val pct = cur * 100 / max; val at = it.l("fullAt")
-            Tile("HEALTH", "$cur/$max", sub = if (cur >= max) "full" else at?.let { a -> "full ${clock(a)}" } ?: "", color = if (pct > 70) GO else if (pct > 35) YELLOW else STOP)
-        }
-        "jail" -> f.l("jailUntil").let { u -> if (u != null && u > now) Tile("JAIL", timerTo = u, sub = "released", color = STOP) else Tile("JAIL", "FREE", color = GO) }
-        "hospital" -> f.l("hospitalUntil").let { u -> if (u != null && u > now) Tile("HOSPITAL", timerTo = u, sub = "released", color = STOP) else Tile("HOSPITAL", "OK", color = GO) }
         "next" -> Tile("NEXT", if (f.optBoolean("ocNow")) "HOLD" else f.s("next")?.uppercase() ?: "WAIT", color = if (f.optBoolean("ocNow")) STOP else AMBER)
         "cash" -> Tile("CASH", f.l("cash")?.let { money(it) } ?: "—", color = PAPER)
-        "energy", "nerve" -> f.optJSONObject(id)?.let {
-            val full = it.getInt("cur") >= it.getInt("max"); val at = it.l("fullAt")
-            Tile(id.uppercase(), "${it.getInt("cur")}/${it.getInt("max")}", sub = if (full) "full" else at?.let { a -> "full ${clock(a)}" } ?: "", color = if (full) GO else PAPER)
-        }
         "drug", "booster", "medical" -> {
             val at = f.optJSONObject("cooldowns")?.l(id)
             if (at != null && at > now) Tile("${id.uppercase()} CD", timerTo = at) else Tile("${id.uppercase()} CD", "READY", color = GO)

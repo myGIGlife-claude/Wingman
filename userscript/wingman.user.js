@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Wingman
 // @namespace    ocrp.torn
-// @version      1.1.1
+// @version      1.1.2
 // @description  Torn PDA helper: OC countdown, "does a trip fit before my OC?" check, foreign stock watch with restock alarm, and a home checklist (Xanax, gym, crimes). Reads the API only. Every game action stays your tap.
 // @match        https://www.torn.com/*
 // @grant        GM_xmlhttpRequest
@@ -60,7 +60,7 @@
 
   const DEFAULTS = {
     dest: 'mex', item: '', method: 'standard',
-    shopMin: 3, safetyMin: 10, capacity: 29, backend: '', secret: '', poll: 60,
+    shopMin: 3, safetyMin: 10, flyBufferMin: 90, capacity: 29, backend: '', secret: '', poll: 60,
     xanax: true, sound: true, side: 'left', key: '',
   };
 
@@ -145,6 +145,9 @@
     p.ocNow = !!(o.ready && o.ready <= t);
     p.flyBy = o.ready ? o.ready - roundTrip : null; // latest take-off from Torn that still beats the OC
     p.fits = o.ready ? t <= p.flyBy : true;
+    // Same fly lock as the widget: the round trip plus the buffer must still fit before the OC.
+    p.flyOk = o.ready ? t <= p.flyBy - (cfg.flyBufferMin == null ? 90 : cfg.flyBufferMin) * 60 : true;
+
 
     // In the air
     if (st === 'Traveling' || (tr.timestamp && tr.timestamp > t && st !== 'Abroad' && st !== 'Hospital' && st !== 'Jail')) {
@@ -190,7 +193,7 @@
       cur: e.current, max: e.maximum, at: e.fulltime ? t + e.fulltime : null, href: '/gym.php', go: 'Open gym' });
     p.steps.push({ id: 'crimes', label: 'Do your crimes', ready: n.maximum > 0 && n.current >= n.maximum,
       cur: n.current, max: n.maximum, at: n.fulltime ? t + n.fulltime : null, href: '/loader.php?sid=crimes', go: 'Open crimes' });
-    p.steps.push({ id: 'fly', label: `Fly to ${target.name}`, ready: !!cfg.item && p.fits && !p.ocNow,
+    p.steps.push({ id: 'fly', label: `Fly to ${target.name}`, ready: !!cfg.item && p.fits && p.flyOk && !p.ocNow,
       href: '/travelagency.php', go: 'Open travel agency' });
     p.next = p.steps.find(s => s.ready) || null;
 
@@ -651,6 +654,7 @@
       + `<label>Flight type<select name="method">${opts(Object.entries(METHODS).map(([k, m]) => [k, m.label]), c.method)}</select></label>`
       + `<div class="ocrp-row2"><label>Shopping time (min)<input name="shopMin" type="number" inputmode="numeric" min="0" max="60" value="${c.shopMin}"></label>`
       + `<label>Safety buffer (min)<input name="safetyMin" type="number" inputmode="numeric" min="0" max="120" value="${c.safetyMin}"></label></div>`
+      + `<label>Fly lock buffer (min before OC)<input name="flyBufferMin" type="number" inputmode="numeric" min="0" max="600" value="${c.flyBufferMin}"></label>`
       + `<label>Items you can carry<input name="capacity" type="number" inputmode="numeric" min="1" max="200" value="${c.capacity}"></label>`
       + `<label>Wingman backend URL (optional)<input name="backend" value="${esc(c.backend)}" placeholder="https://…run.app" autocomplete="off"></label>`
       + `<label>Wingman app secret (optional)<input name="secret" type="password" value="${esc(c.secret)}" autocomplete="off"></label>`
@@ -679,6 +683,7 @@
     c.shopMin = clamp(v('shopMin').value, 0, 60, DEFAULTS.shopMin);
     c.safetyMin = clamp(v('safetyMin').value, 0, 120, DEFAULTS.safetyMin);
     c.capacity = clamp(v('capacity').value, 1, 200, DEFAULTS.capacity);
+    c.flyBufferMin = clamp(v('flyBufferMin').value, 0, 600, DEFAULTS.flyBufferMin);
     c.backend = v('backend').value.trim().replace(/\/+$/, '');
     c.secret = v('secret').value.trim();
     c.poll = clamp(v('poll').value, 30, 600, DEFAULTS.poll);
@@ -687,7 +692,7 @@
     c.sound = v('sound').checked;
     if (v('key')) c.key = v('key').value.trim();
     save('cfg', c);
-    syncBackend('PUT', '/settings', { dest: c.dest, item: c.item, method: c.method, shopMin: c.shopMin, safetyMin: c.safetyMin, capacity: c.capacity, xanax: c.xanax });
+    syncBackend('PUT', '/settings', { dest: c.dest, item: c.item, method: c.method, shopMin: c.shopMin, safetyMin: c.safetyMin, capacity: c.capacity, flyBufferMin: c.flyBufferMin, xanax: c.xanax });
     if (!S.user && apiKey()) pollTorn();
   }
 
@@ -948,7 +953,7 @@ position:fixed;left:10px;bottom:64px;z-index:2147483000;font:12.5px/1.4 ui-monos
     // Shared settings: pull what the app saved so both stay in sync.
     syncBackend('GET', '/settings').then(r => {
       if (!r || !r.dest) return;
-      for (const k of ['dest', 'item', 'method', 'shopMin', 'safetyMin', 'capacity', 'xanax']) if (r[k] !== undefined) S.cfg[k] = r[k];
+      for (const k of ['dest', 'item', 'method', 'shopMin', 'safetyMin', 'capacity', 'flyBufferMin', 'xanax']) if (r[k] !== undefined) S.cfg[k] = r[k];
       save('cfg', S.cfg); afterUpdate();
     });
     if (!S.cfg.item && !S.user) { S.open = true; }

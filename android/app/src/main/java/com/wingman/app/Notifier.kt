@@ -9,12 +9,10 @@ import android.content.Intent
 
 object Notifier {
     const val ALERTS = "alerts"
-    const val UPDATES = "updates"
 
     fun channels(c: Context) {
         val m = c.getSystemService(NotificationManager::class.java)
         m.createNotificationChannel(NotificationChannel(ALERTS, "Run alerts", NotificationManager.IMPORTANCE_HIGH).apply { enableVibration(true) })
-        m.createNotificationChannel(NotificationChannel(UPDATES, "Updates", NotificationManager.IMPORTANCE_LOW))
     }
 
     fun openIntent(c: Context, url: String?, code: Int, before: Long = 0): PendingIntent {

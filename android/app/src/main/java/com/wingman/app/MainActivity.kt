@@ -209,6 +209,7 @@ class MainActivity : Activity() {
             document()
         }
         loadItems(j.optString("dest", "mex"), j.optString("item")); Api.refresh(this)
+        Api.call(this, "PUT", "/settings", JSONObject().put("tz", java.util.TimeZone.getDefault().id).toString()) // alerts quote times in your zone
         connected = true; runOnUiThread { document() }; say("Connected.")
     }
 
@@ -234,7 +235,7 @@ class MainActivity : Activity() {
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
             .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90)
-            .put("xanax", xanax.on).put("alerts", alerts)
+            .put("xanax", xanax.on).put("alerts", alerts).put("tz", java.util.TimeZone.getDefault().id)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
         Api.refresh(this)
     }
