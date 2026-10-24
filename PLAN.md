@@ -16,6 +16,7 @@ Backend: torn/yata clients, widget model, events, tick, routes.
 
 ## Decisions
 - 2026-10-24: No workers attached, no gcloud/firebase CLI on server; building code myself. GCP work goes through the clauderc service account (cannot grant roles or link billing).
+- 2026-10-24: GCP project `wingman-oc` (number 157659703638) created under the org via API. `wingman` was taken. Blocked on billing link by Jonathan before enabling APIs.
 
 ## Known issues
-- Need from Jonathan before infra: project ID (suggest wingman), region (us-east1), billing link, Torn API key (Limited).
+- Need from Jonathan: link billing to `wingman-oc` in console; Torn API key (Limited) via cLaudeRC. Region assumed us-east1.
