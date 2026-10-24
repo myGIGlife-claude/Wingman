@@ -128,7 +128,7 @@ export function computePlan(x: { user: any; oc: any; cfg: Cfg; t: number; learne
   p.next = p.steps.find((s: Step) => s.ready) || null;
 
   if (o.ready && !p.fits && !p.ocNow) {
-    p.alts = DESTS.filter(d => d.id !== target.id && t + flightSecs(cfg, d.id, learned) * 2 + shop + safety <= o.ready)
+    p.alts = DESTS.filter(d => d.id !== target.id && t + flightSecs(cfg, d.id, learned) * 2 + shop + safety <= o.ready!)
       .map(d => d.short);
   }
   return p;

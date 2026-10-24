@@ -4,11 +4,11 @@ Last updated: 2026-10-24 00:20 UTC
 Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/wingman-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
-Backend: torn/yata clients, widget model, events, tick, routes.
+infra: secrets (blocked by classifier, ask Jonathan), Firebase, deploy.
 
 ## Tasks
 - [x] Backend: plan.ts + tests (11 pass)
-- [ ] Backend: torn/yata clients, widget model, events, tick, routes, Firestore, FCM
+- [x] Backend: clients, model, events, tick, routes, Dockerfile (tsc + 15 tests pass; not run live)
 - [ ] Userscript v1.1 (buy max prefill, live stock, capacity, shared settings)
 - [ ] Android app (widget, FCM, settings, CI workflow)
 - [ ] infra/setup.sh (needs Jonathan: billing link, role grants)
