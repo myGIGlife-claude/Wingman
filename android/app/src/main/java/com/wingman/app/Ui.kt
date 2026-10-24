@@ -3,10 +3,25 @@ package com.wingman.app
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Build
 import android.view.Gravity
+import android.view.View
+import android.view.WindowInsets
 import android.widget.TextView
 
 object Ui {
+    // Newer Android draws apps edge to edge. Pad a screen's root so nothing sits under the status bar, nav bar or camera cutout.
+    fun fitSystemBars(v: View) {
+        v.setOnApplyWindowInsetsListener { view, insets ->
+            if (Build.VERSION.SDK_INT >= 30) {
+                val b = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+                view.setPadding(b.left, b.top, b.right, b.bottom)
+            } else @Suppress("DEPRECATION") view.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
+            insets
+        }
+        v.requestApplyInsets()
+    }
+
     private val INK = Color.parseColor("#0E0E0C")
 
     // A clear ON / OFF pill: filled amber when on, dim outline when off.

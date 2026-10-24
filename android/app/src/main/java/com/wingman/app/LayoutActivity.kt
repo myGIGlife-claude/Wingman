@@ -25,8 +25,8 @@ class LayoutActivity : Activity() {
         Tiles.ALL.filter { d -> on.none { it == d.id } }.forEach { state.add(it to false) }
         title = Prefs.get(this, "show_title") != "0"
         btnOn.addAll(Prefs.get(this, "buttons").ifEmpty { Tiles.DEFAULT_BUTTONS }.split(','))
-        col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(40), dp(16), dp(40)) }
-        setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col) })
+        col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(24)) }
+        setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col); Ui.fitSystemBars(this) })
         draw()
     }
 

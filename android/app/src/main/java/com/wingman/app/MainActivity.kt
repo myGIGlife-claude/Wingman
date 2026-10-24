@@ -118,7 +118,7 @@ class MainActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         if (Build.VERSION.SDK_INT >= 33) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(40), dp(16), dp(40)) }
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(24)) }
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         top.addView(mono(TextView(this).apply { text = "WINGMAN"; letterSpacing = 0.2f }, 26f, amber, true), LinearLayout.LayoutParams(0, -2, 1f))
         top.addView(mono(TextView(this).apply { text = "v" + BuildConfig.VERSION_NAME }, 12f, dim))
@@ -162,7 +162,7 @@ class MainActivity : Activity() {
             addView(button("Battery: set Unrestricted", false) { batteryHelp() })
         }
 
-        setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col) })
+        setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col); Ui.fitSystemBars(this) })
         Prefs.get(this, "crash").takeIf { it.isNotEmpty() }?.let { status.text = "LAST CRASH:\n$it"; Prefs.put(this, "crash", "") }
         if (hasUrl) load()
     }
