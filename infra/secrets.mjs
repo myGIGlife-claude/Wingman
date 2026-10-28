@@ -1,7 +1,7 @@
-// Creates TORN_API_KEY (from env TORN_KEY), APP_SECRET and TICK_SECRET. Prints status codes only.
+// Creates TORN_API_KEY (from env TORN_KEY), APP_SECRET, TICK_SECRET and KEY_ENC_SECRET. Prints status codes only.
 import { randomBytes } from 'node:crypto';
 import { g, P } from './common.mjs';
-const vals = { TORN_API_KEY: process.env.TORN_KEY, APP_SECRET: randomBytes(32).toString('hex'), TICK_SECRET: randomBytes(32).toString('hex') };
+const vals = { TORN_API_KEY: process.env.TORN_KEY, APP_SECRET: randomBytes(32).toString('hex'), TICK_SECRET: randomBytes(32).toString('hex'), KEY_ENC_SECRET: randomBytes(32).toString('hex') };
 for (const [n, v] of Object.entries(vals)) {
   if (!v) { console.log(n, 'missing value'); continue; }
   const [c] = await g('POST', `https://secretmanager.googleapis.com/v1/projects/${P}/secrets?secretId=${n}`, { replication: { automatic: {} } });
