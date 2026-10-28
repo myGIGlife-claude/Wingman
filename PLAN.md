@@ -1,4 +1,4 @@
-Last updated: 2026-10-28 13:35 UTC
+Last updated: 2026-10-28 15:05 UTC
 
 ## Goal
 Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/wingman-build-spec.md`. Hard rule: API-only, never automate game actions.
@@ -21,7 +21,8 @@ Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exi
 - [ ] Website download link: parked until launch (Jonathan, 2026-10-28). Options were Play test link / direct APK / emailed link.
 - [x] v1.17.0 Account screen: invite sign-up, Torn key check (what works, Full-access warning), change key, delete account, sign out. Backend: POST /keycheck, PUT /key, GET /me. Secrets now exist; Torn key-info reply shape unverified (level shows unknown if absent)
 - [ ] Web deletion link for Google Play (a page on the site that explains how to delete an account)
-- [ ] Own FF estimate from attack logs (replace ffscouter.com)
+- [x] Own FF estimate from your attack history (ffestimate.ts): target rows show the FF you last got and a stats floor. Attack/battlestats reply shapes UNVERIFIED; run infra/probe-shapes.mjs with a real key and compare.
+- [ ] Skipped, with reasons: NPC loot timers (YATA loot feed has April timestamps, stale), stock exchange helper and faction OC readiness (reply shapes unknown, need the probe output), trains available, inventory worth, rental filter
 - [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
 
 ## Decisions
