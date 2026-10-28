@@ -1,5 +1,5 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchAwards, fetchChain, fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
+import { fetchAttacks, fetchAwards, fetchChain, fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
 import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
 import { findStock } from './yata.ts';
@@ -11,6 +11,7 @@ import { sharedYata, sharedHist, seedHistFrom } from './shared.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { estimate } from './restock.ts';
+import { myScore, observedFF, rowFor } from './ffestimate.ts';
 
 const SENT_TTL = 3 * 86400;
 
@@ -18,10 +19,16 @@ const SENT_TTL = 3 * 86400;
 export interface Ctx { uid: string; key: string; ffKey: string }
 
 // Addiction penalty and Xanax / overdose counts change slowly, so refresh them every 10 minutes (2 API calls).
-async function refreshExtra(key: string, st: any, t: number) {
+async function refreshExtra(key: string, st: any, t: number, myId: number) {
   if (st.extra && t - st.extra.at < 600 && 'rehabs' in st.extra) return; // a stored copy without the newer fields refreshes at once
   try {
     const [bs, ds, ic] = await Promise.all([fetchBattleStats(key), fetchDrugStats(key), fetchIcons(key)]);
+    // Your own fair fights against past targets, for the stat estimate. Kept for up to 300 players; a failure leaves the old copy.
+    try {
+      const seen = { ...(st.ffSeen?.byId ?? {}), ...observedFF(await fetchAttacks(key), myId) };
+      const byId = Object.fromEntries(Object.entries<any>(seen).sort((a, b) => b[1].at - a[1].at).slice(0, 300));
+      st.ffSeen = { at: t, mine: myScore(bs) ?? st.ffSeen?.mine ?? null, byId };
+    } catch { /* keep the old copy */ }
     const icon = addictionIcon(ic); // the brain icon is what Torn shows; the stat modifier is the fallback
     st.extra = { at: t, addiction: icon ? icon.pct : addictionFrom(bs), addictionLabel: icon?.label ?? null, rehabs: rehabCount(ds), ...drugCounts(ds) };
   } catch { st.extra = { ...(st.extra ?? {}), at: t }; } // keep the old numbers and retry in 10 minutes
@@ -53,7 +60,9 @@ export function targetsView(cfg: any, st: any, level: number, now: number, ffKey
   const o = { myLevel: level, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now, limit: 40 };
   if (cfg.ffEnabled && ffKey && st.ff) return { ...pickTargets(st.ff.list, { ...o, useFF: true }), source: 'ff', ...(st.ff.error ? { error: st.ff.error } : {}) }; // Firestore rejects undefined fields
   if (cfg.ffEnabled && !ffKey) return { matches: [], total: 0, source: 'ff', error: 'FF Scouter key is not set up on the server' };
-  return st.targets ? { ...pickTargets(st.targets.list, o), source: 'list' } : undefined;
+  // Without FF Scouter, rows get the fair fight you last got against that player and a floor for their stats (see ffestimate.ts).
+  const mine: number | null = st.ffSeen?.mine ?? null;
+  return st.targets ? { ...pickTargets(st.targets.list.map((x: any) => ({ ...x, ...rowFor(st.ffSeen?.byId?.[x.id], mine) })), o), source: 'list' } : undefined;
 }
 
 // Build the plan from live data. Shared by /tick and /state.
@@ -106,7 +115,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
   }
   await timed('ff', refreshFF(key, ffKey, cfg, st, t));
   const addictionBefore = st.extra?.addiction;
-  await timed('extra', refreshExtra(key, st, t));
+  await timed('extra', refreshExtra(key, st, t, Number(user.player_id)));
   const tg = targetsView(cfg, st, user.level ?? 0, t, ffKey);
 
   let p = plan(user, oc, cfg, st, t);

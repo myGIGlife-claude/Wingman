@@ -104,3 +104,9 @@ export async function fetchKeyLevel(key: string): Promise<number | null> {
   const t = String(j.access_type ?? '').toLowerCase();
   return t.startsWith('public') ? 1 : t.startsWith('minimal') ? 2 : t.startsWith('limited') ? 3 : t.startsWith('full') ? 4 : null;
 }
+
+// Your latest 100 attacks (outgoing and incoming); the caller keeps the ones you made. Each carries the fair fight you got.
+export async function fetchAttacks(key: string): Promise<any[]> {
+  const j = await get(`https://api.torn.com/v2/user/attacks?limit=100&sort=desc&key=${key}&comment=Wingman`);
+  return Array.isArray(j.attacks) ? j.attacks : j.attacks && typeof j.attacks === 'object' ? Object.values(j.attacks) : [];
+}
