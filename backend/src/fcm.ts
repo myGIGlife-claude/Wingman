@@ -6,8 +6,8 @@ import type { Widget } from './model.ts';
 
 // Sends the widget model as a high-priority data message; alerts go as their own data messages.
 // Throws when nothing could be delivered, so the caller can retry on the next tick.
-export async function push(model: Widget | undefined, alerts: { text: string; url: string | null }[]) {
-  const tokens = await listDevices();
+export async function push(uid: string, model: Widget | undefined, alerts: { text: string; url: string | null }[]) {
+  const tokens = await listDevices(uid);
   const msgs = tokens.flatMap(token => {
     const base = { token, android: { priority: 'high' as const } };
     const list: any[] = model ? [{ ...base, data: { model: JSON.stringify(model) } }] : [];
@@ -20,7 +20,7 @@ export async function push(model: Widget | undefined, alerts: { text: string; ur
   res.responses.forEach((r, i) => {
     if (!r.error) return;
     console.error('fcm send failed', r.error.code, r.error.message, 'project=', getApp().options.projectId);
-    if (r.error.code === 'messaging/registration-token-not-registered') removeDevice(msgs[i].token).catch(() => {});
+    if (r.error.code === 'messaging/registration-token-not-registered') removeDevice(uid, msgs[i].token).catch(() => {});
     else failed++;
   });
   if (failed === msgs.length) throw new Error('all pushes failed');

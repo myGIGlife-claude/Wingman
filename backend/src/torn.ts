@@ -69,3 +69,10 @@ export function rehabCount(j: any): number | null {
   const r = j?.personalstats?.drugs?.rehabilitations; // a number, or an object with an amount
   return typeof r === 'number' ? r : typeof r?.amount === 'number' ? r.amount : null;
 }
+
+// Sign-up check: the key must be valid and able to read what Wingman needs (OC needs a Limited key). Returns the player.
+export async function verifyKey(key: string): Promise<{ id: number; name: string }> {
+  const j = await get(`https://api.torn.com/user/?selections=basic&key=${key}&comment=Wingman`);
+  await fetchOC(key);
+  return { id: Number(j.player_id), name: String(j.name ?? '') };
+}

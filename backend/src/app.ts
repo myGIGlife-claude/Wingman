@@ -1,38 +1,100 @@
 import Fastify from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
-import { tick, currentModel } from './tick.ts';
-import { addDevice, getSettings, putSettings, setBought, getState } from './store.ts';
+import { currentModel, type Ctx } from './tick.ts';
+import { tickAll, ownerCtx, userCtx, type Secrets } from './accounts.ts';
+import { addDevice, getSettings, putSettings, setBought, getState, getUser, putUser, userByTokenHash, deleteUser, OWNER } from './store.ts';
 import { DESTS } from './plan.ts';
 import { push } from './fcm.ts';
+import { encrypt, hashToken, newToken } from './crypto.ts';
+import { verifyKey, TornError } from './torn.ts';
+import { sharedYata } from './shared.ts';
 
 const same = (a: unknown, b: string) => {
   const x = Buffer.from(String(a ?? '')), y = Buffer.from(b);
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
-export function buildApp(S: { tornKey: string; appSecret: string; tickSecret: string; ffKey?: string }, logger = true) {
+export interface AppSecrets extends Secrets { appSecret: string; tickSecret: string; inviteCode?: string }
+
+export function buildApp(S: AppSecrets, logger = true) {
   const app = Fastify({ logger });
-  const TORN_API_KEY = S.tornKey, APP_SECRET = S.appSecret, TICK_SECRET = S.tickSecret;
   app.addContentTypeParser('*', { parseAs: 'string' }, (_r, body, done) => {
     try { done(null, body ? JSON.parse(body as string) : {}); } catch { done(Object.assign(new Error('invalid JSON'), { statusCode: 400 })); }
   });
+
+  // Sign-ups per address per hour, so a guessed invite code cannot be brute-forced. In memory: resets when the instance restarts.
+  const tries = new Map<string, { n: number; reset: number }>();
+  const tooMany = (ip: string) => {
+    const now = Date.now(), t = tries.get(ip);
+    if (!t || t.reset < now) { tries.set(ip, { n: 1, reset: now + 3_600_000 }); return false; }
+    return ++t.n > 10;
+  };
+
+  // Every route except /tick and /signup needs a player: the owner's shared secret, or a personal token from /signup.
+  app.decorateRequest('ctx', null);
   app.addHook('onRequest', async (req, reply) => {
-    const ok = req.url.startsWith('/tick') ? same(req.headers['x-tick-key'], TICK_SECRET) : same(req.headers['x-wingman-key'], APP_SECRET);
-    if (!ok) return reply.code(401).send({ error: 'unauthorized' });
+    const path = req.url.split('?')[0];
+    if (path === '/tick') { if (!same(req.headers['x-tick-key'], S.tickSecret)) return reply.code(401).send({ error: 'unauthorized' }); return; }
+    if (path === '/signup') return;
+    const k = String(req.headers['x-wingman-key'] ?? '');
+    if (k && S.appSecret && same(k, S.appSecret) && S.tornKey) { (req as any).ctx = ownerCtx(S); return; }
+    const u = k.length >= 32 ? await userByTokenHash(hashToken(k)) : undefined;
+    const ctx = u?.active !== false && u ? userCtx(u, S) : null;
+    if (!ctx) return reply.code(401).send({ error: 'unauthorized' });
+    (req as any).ctx = ctx;
+  });
+  const ctxOf = (req: any): Ctx => req.ctx;
+
+  app.post('/tick', async () => tickAll(S));
+
+  // Invite-only: closed unless an invite code is configured on the server.
+  app.post('/signup', async (req, reply) => {
+    if (!S.inviteCode || !S.encSecret) return reply.code(403).send({ error: 'sign-up is closed' });
+    if (tooMany(req.ip)) return reply.code(429).send({ error: 'too many attempts, try later' });
+    const b: any = req.body ?? {};
+    if (!same(req.headers['x-invite-code'], S.inviteCode)) return reply.code(403).send({ error: 'invalid invite code' });
+    const key = String(b.tornKey ?? '').trim();
+    if (!/^[A-Za-z0-9]{16}$/.test(key)) return reply.code(400).send({ error: 'enter your 16-character Torn API key' });
+    let p: { id: number; name: string };
+    try { p = await verifyKey(key); } catch (e: any) {
+      if (e instanceof TornError) return reply.code(400).send({ error: `Torn rejected the key: ${e.message}` });
+      return reply.code(502).send({ error: 'could not reach Torn, try again' });
+    }
+    if (!Number.isInteger(p.id) || p.id <= 0) return reply.code(502).send({ error: 'unexpected reply from Torn' });
+    const uid = `p${p.id}`, token = newToken(), old = await getUser(uid);
+    // Signing up again with the same key replaces the token (lost phone) and turns the account back on.
+    await putUser({ uid, name: p.name, tornKeyEnc: encrypt(key, S.encSecret), tokenHash: hashToken(token), active: true, hasDevice: old?.hasDevice ?? false, lastTickAt: old?.lastTickAt ?? 0, createdAt: old?.createdAt ?? Math.floor(Date.now() / 1000) });
+    return { token, name: p.name };
   });
 
-  app.post('/tick', async () => tick(TORN_API_KEY, S.ffKey));
-  app.post('/register', async req => { const b: any = req.body; await addDevice(String(b.fcmToken), String(b.platform ?? 'android')); return { ok: true }; });
-  app.get('/state', async req => currentModel(TORN_API_KEY, (req.query as any).fresh === '1', S.ffKey));
-  app.get('/settings', async () => getSettings());
-  app.put('/settings', async req => { await putSettings(req.body as any); return getSettings(); });
-  app.post('/bought', async () => { await setBought(true); return { ok: true }; });
-  app.post('/unbought', async () => { await setBought(false); return { ok: true }; });
-  app.post('/test', async () => { const st = await getState(); await push(st.model, [{ text: 'Wingman test notification', url: null }]); return { ok: true }; });
+  app.get('/me', async req => { const c = ctxOf(req); return { id: c.uid, ffKey: !!c.ffKey }; });
+  // Removes the account and everything stored for it.
+  app.delete('/account', async (req, reply) => {
+    const c = ctxOf(req);
+    if (c.uid === OWNER) return reply.code(400).send({ error: 'the server owner cannot be deleted here' });
+    await deleteUser(c.uid);
+    return { ok: true };
+  });
+  // The player's own FF Scouter key ('' removes it).
+  app.put('/account', async (req, reply) => {
+    const c = ctxOf(req), b: any = req.body ?? {};
+    if (c.uid === OWNER) return reply.code(400).send({ error: 'the owner uses the server FF Scouter key' });
+    if (typeof b.ffKey !== 'string' || b.ffKey.length > 100) return reply.code(400).send({ error: 'ffKey must be a string' });
+    await putUser({ uid: c.uid, ffKeyEnc: b.ffKey.trim() ? encrypt(b.ffKey.trim(), S.encSecret) : '' });
+    return { ok: true };
+  });
+
+  app.post('/register', async req => { const b: any = req.body; await addDevice(ctxOf(req).uid, String(b.fcmToken), String(b.platform ?? 'android')); return { ok: true }; });
+  app.get('/state', async req => currentModel(ctxOf(req), (req.query as any).fresh === '1'));
+  app.get('/settings', async req => getSettings(ctxOf(req).uid));
+  app.put('/settings', async req => { const u = ctxOf(req).uid; await putSettings(u, req.body as any); return getSettings(u); });
+  app.post('/bought', async req => { await setBought(ctxOf(req).uid, true); return { ok: true }; });
+  app.post('/unbought', async req => { await setBought(ctxOf(req).uid, false); return { ok: true }; });
+  app.post('/test', async req => { const u = ctxOf(req).uid, st = await getState(u); await push(u, st.model, [{ text: 'Wingman test notification', url: null }]); return { ok: true }; });
   app.get('/items', async req => {
     const dest = String((req.query as any).dest ?? '');
     if (!DESTS.some(d => d.id === dest)) return [];
-    const y = (await getState()).yata?.stocks?.[dest]?.stocks ?? [];
+    const y = (await sharedYata(Math.floor(Date.now() / 1000), 120))?.stocks?.[dest]?.stocks ?? [];
     return y.map((s: any) => ({ name: s.name, cost: s.cost, qty: s.quantity }));
   });
   return app;

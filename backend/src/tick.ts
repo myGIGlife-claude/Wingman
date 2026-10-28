@@ -2,16 +2,20 @@ import { computePlan, learnFlight, DESTS } from './plan.ts';
 import { fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
 import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
-import { fetchYata, findStock } from './yata.ts';
+import { findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
 import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
 import { alertOn } from './settings.ts';
-import { getSettings, getState, saveState, setYata } from './store.ts';
+import { getSettings, getState, saveState } from './store.ts';
+import { sharedYata, sharedHist, seedHistFrom } from './shared.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
-import { observe, estimate } from './restock.ts';
+import { estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
+
+// Who a tick or request is for: the player's id, their Torn key and optional FF Scouter key.
+export interface Ctx { uid: string; key: string; ffKey: string }
 
 // Addiction penalty and Xanax / overdose counts change slowly, so refresh them every 10 minutes (2 API calls).
 async function refreshExtra(key: string, st: any, t: number) {
@@ -60,9 +64,10 @@ export function plan(user: any, oc: any, cfg: any, st: any, t: number) {
   return computePlan({ user, oc, cfg, t, learned: st.learned, stock });
 }
 
-export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phase?: string; note?: string }> {
-  const [cfg, st] = await Promise.all([getSettings(), getState()]);
+export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; phase?: string; note?: string }> {
+  const [cfg, st] = await Promise.all([getSettings(uid), getState(uid)]);
   const stored = structuredClone(st); // st is edited below; this is what the database holds
+  if (st.hist) { await seedHistFrom(st.hist); delete st.hist; } // older versions kept restock history per player; it is shared now
   const wall = Math.floor(Date.now() / 1000);
   if (st.backoffUntil > wall) return { ok: true, note: 'backoff' };
 
@@ -70,12 +75,12 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
   try {
     [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
   } catch (e: any) {
-    if (isRateLimit(e)) { await saveState({ ...st, backoffUntil: wall + 120 }); return { ok: false, note: 'rate limited' }; }
+    if (isRateLimit(e)) { await saveState(uid, { ...st, backoffUntil: wall + 120 }); return { ok: false, note: 'rate limited' }; }
     if (isKeyProblem(e)) {
       const k = `key:${Math.floor(wall / 86400)}`;
       if (!st.sent?.[k]) {
-        await push(st.model as Widget | undefined, [{ text: 'Torn API key problem — check settings', url: null }]).catch(() => {});
-        await saveState({ ...st, sent: { ...st.sent, [k]: wall } });
+        await push(uid, st.model as Widget | undefined, [{ text: 'Torn API key problem — check settings', url: null }]).catch(() => {});
+        await saveState(uid, { ...st, sent: { ...st.sent, [k]: wall } });
       }
       return { ok: false, note: 'key problem' };
     }
@@ -83,11 +88,9 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
   }
   const t: number = user.timestamp ?? wall; // server time corrects clock offset
 
-  // YATA: 60s while abroad waiting for stock, otherwise 5 min.
-  const watching = user.status?.state === 'Abroad' && st.stockQty === 0;
-  if (!st.yata || t - st.yata.fetchedAt >= (watching ? 55 : 295)) {
-    try { st.yata = await fetchYata(t); } catch { /* keep the cached copy; widget shows "seen Xm ago" */ }
-  }
+  // Stock reports and restock history are shared by all players and fetched once a minute for the whole server.
+  st.yata = await sharedYata(t);
+  const hist = await sharedHist();
 
   // In-game Targets list, refreshed every 2 minutes (1 to 3 API calls).
   if (!st.targets || t - st.targets.at >= 120) {
@@ -108,12 +111,7 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
     if (l) { st.learned = { ...st.learned, [l.key]: l.secs }; p = plan(user, oc, cfg, st, t); }
   }
 
-  // Learn restock rhythm for the chosen item from new stock reports.
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
-  const hist = { ...(st.hist ?? {}) };
-  for (const [cc, c] of Object.entries<any>(st.yata?.stocks ?? {})) {
-    for (const it of c.stocks ?? []) { const k = `${cc}:${String(it.name).toLowerCase()}`; hist[k] = observe(hist[k], it.quantity, c.update); }
-  }
   const rs = hk ? estimate(hist[hk], t) : undefined;
 
   const phaseChanged = p.phase !== st.phase;
@@ -136,39 +134,37 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
   const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, st.extra);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
-    try { await push(slimForPush(model), events); } catch (e) {
+    try { await push(uid, slimForPush(model), events); } catch (e) {
       // Keep the old phase/model so the same events and widget update are tried again next tick.
       console.error('push failed', e);
-      await saveState({ ...st, yata: st.yata, learned: st.learned, hist });
+      await saveState(uid, { ...st, learned: st.learned });
       return { ok: false, phase: p.phase, note: 'push failed' };
     }
   }
   for (const e of events) sent[e.key] = wall;
 
   // A BOUGHT tap that landed while this tick ran must not be overwritten.
-  if (bought === !!st.bought) bought = !!(await getState()).bought;
+  if (bought === !!st.bought) bought = !!(await getState(uid)).bought;
 
   const next = {
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, hist, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
+    landedCash: landedCash ?? null, bought, sent, model, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
   };
-  delete (next as any).snapshot; // old versions stored the raw Torn profile here; nothing reads it
-  if (!sameState(next, stored)) await saveState(next); // skip rewriting identical state
+  delete (next as any).snapshot; delete (next as any).yata; // old versions stored the raw Torn profile here; nothing reads it
+  if (!sameState(next, stored)) await saveState(uid, next); // skip rewriting identical state
   return { ok: true, phase: p.phase };
 }
 
 // Fresh widget model without side effects (GET /state).
-export async function currentModel(key: string, fresh = false, ffKey = ''): Promise<Widget> {
-  const [cfg, st] = await Promise.all([getSettings(), getState()]);
+export async function currentModel({ uid, key, ffKey }: Ctx, fresh = false): Promise<Widget> {
+  const [cfg, st, hist] = await Promise.all([getSettings(uid), getState(uid), sharedHist()]);
   const [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
   // A manual refresh pulls new stock too, but at most every 20 seconds so taps cannot hammer YATA.
-  if (fresh && (!st.yata || user.timestamp - st.yata.fetchedAt >= 20)) {
-    try { st.yata = await fetchYata(user.timestamp); await setYata(st.yata); } catch { /* keep the cached copy */ }
-  }
+  st.yata = await sharedYata(user.timestamp, fresh ? 20 : 120);
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
-  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
+  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(hist[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
     targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), st.extra);
 }
