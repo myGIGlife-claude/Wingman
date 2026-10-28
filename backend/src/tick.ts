@@ -8,7 +8,7 @@ import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
 import { alertOn } from './settings.ts';
 import { getSettings, getState, saveState, setYata } from './store.ts';
 import { push } from './fcm.ts';
-import { nextBought, pruneSent, sameState } from './logic.ts';
+import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { observe, estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
@@ -18,8 +18,13 @@ async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: numbe
   if (!cfg.ffEnabled || !ffKey || (st.ff && t - st.ff.at < 120 && st.ff.maxff === cfg.ffMaxFF)) return;
   try {
     // FF Scouter already gives name, level, difficulty and last action. Only players offline long enough need a profile lookup (for hospital time).
-    const rows = (await fetchFFTargets(ffKey, { maxff: cfg.ffMaxFF, limit: 50 }))
-      .filter(r => r.lastAction > 0 && t - r.lastAction >= cfg.targetMinOfflineMin * 60).slice(0, 20);
+    // FF Scouter returns players right at the difficulty asked for, so ask for a few bands up to your setting to get a mix.
+    const bands = [...new Set([Math.max(1, cfg.ffMaxFF - 0.6), Math.max(1, cfg.ffMaxFF - 0.3), cfg.ffMaxFF].map(x => Math.round(x * 10) / 10))];
+    // Each band gets an equal share, so the difficulty you chose is always represented.
+    const perBand = Math.floor(40 / bands.length), seen = new Set<number>();
+    const rows = (await Promise.all(bands.map(async b => (await fetchFFTargets(ffKey, { maxff: b, limit: 30 }))
+      .filter(r => r.lastAction > 0 && t - r.lastAction >= cfg.targetMinOfflineMin * 60).slice(0, perBand)))).flat()
+      .filter(r => !seen.has(r.id) && seen.add(r.id));
     const list = (await Promise.all(rows.map(async r => {
       const p = await fetchProfile(key, r.id).catch(() => null);
       return p ? { ...compact([{ id: r.id, ...p }])[0], ff: r.ff, bs: r.bs } : null;
@@ -31,7 +36,7 @@ async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: numbe
 }
 
 export function targetsView(cfg: any, st: any, level: number, now: number, ffKey: string): TargetsView | undefined {
-  const o = { myLevel: level, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now, limit: 8 };
+  const o = { myLevel: level, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now, limit: 40 };
   if (cfg.ffEnabled && ffKey && st.ff) return { ...pickTargets(st.ff.list, { ...o, useFF: true }), source: 'ff', ...(st.ff.error ? { error: st.ff.error } : {}) }; // Firestore rejects undefined fields
   if (cfg.ffEnabled && !ffKey) return { matches: [], total: 0, source: 'ff', error: 'FF Scouter key is not set up on the server' };
   return st.targets ? { ...pickTargets(st.targets.list, o), source: 'list' } : undefined;
@@ -115,7 +120,7 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
   const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
-    try { await push(model, events); } catch (e) {
+    try { await push(slimForPush(model), events); } catch (e) {
       // Keep the old phase/model so the same events and widget update are tried again next tick.
       console.error('push failed', e);
       await saveState({ ...st, yata: st.yata, learned: st.learned, hist });

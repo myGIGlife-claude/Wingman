@@ -26,7 +26,11 @@ class WingmanWidget : AppWidgetProvider() {
 
         fun updateAll(c: Context) {
             val m = AppWidgetManager.getInstance(c)
-            for ((cls, kind) in KINDS) m.getAppWidgetIds(ComponentName(c, cls)).forEach { m.updateAppWidget(it, build(c, kind)) }
+            for ((cls, kind) in KINDS) {
+                val ids = m.getAppWidgetIds(ComponentName(c, cls))
+                ids.forEach { m.updateAppWidget(it, build(c, kind, it)) }
+                if (kind == "targets" && ids.isNotEmpty()) m.notifyAppWidgetViewDataChanged(ids, R.id.tgt_list)
+            }
             scheduleRender(c)
         }
 
@@ -41,7 +45,7 @@ class WingmanWidget : AppWidgetProvider() {
                 f.optLong("flyOkUntil", 0).takeIf { it > 0 }?.let { listOf(it - 7200, it) },
                 f.optLong("ocReadyAt", 0).takeIf { it > 0 }?.let { listOf(it - 1800, it, it - 7200) },
                 f.optLong("leaveBy", 0).takeIf { it > 0 }?.let { listOf(it - 600, it) },
-                f.optJSONObject("targets")?.optJSONArray("matches")?.let { a -> (0 until a.length()).mapNotNull { i -> a.getJSONObject(i).takeIf { !it.isNull("until") }?.optLong("until") } },
+                targetItems(c).mapNotNull { t -> t.takeIf { !it.isNull("until") }?.optLong("until") }.takeIf { it.isNotEmpty() },
             ).flatten().filter { it > now + 1 }
             val next = marks.minOrNull() ?: return
             try {
@@ -213,7 +217,8 @@ class WingmanWidget : AppWidgetProvider() {
         }
 
         // Shows when the data last changed, so a refresh tap visibly does something.
-        fun build(c: Context, kind: String = "all"): RemoteViews {
+        fun build(c: Context, kind: String = "all", id: Int = 0): RemoteViews {
+            if (kind == "targets") return buildTargets(c, id)
             val v = buildBody(c, kind)
             val at = Prefs.get(c, "model_at").toLongOrNull()
             if (at != null && kind != "actions" && kind != "stock") v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
@@ -243,7 +248,6 @@ class WingmanWidget : AppWidgetProvider() {
                 statusSections(c, m, f, listOf("life", "energy", "nerve", "jail", "hospital"), now, refresh, add)
                 return v
             }
-            if (kind == "targets") { targetsSections(c, f, now, refresh, add); return v }
             if (kind == "oc") { add(panel(c, homeOc(f, now), now)); return v }
             if (kind == "stock") { add(stockCard(c, f, now)); return v }
             if (kind == "actions") { quickButtons(c, f, now, refresh, add); return v }
@@ -336,25 +340,16 @@ class WingmanWidget : AppWidgetProvider() {
                     quickButtons(c, f, now, refresh, add)
         }
 
-        // Attack list: offline players you can beat. Tapping a row opens their attack page; you press Torn's own button.
-        private fun targetsSections(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
-            val tg = f.optJSONObject("targets")
-            val list = tg?.optJSONArray("matches")
-            val total = tg?.optInt("total") ?: 0
-            add(RemoteViews(c.packageName, R.layout.s_header).also {
-                it.setTextViewText(R.id.h_faction, "ATTACK LIST"); it.setTextViewText(R.id.h_name, if (tg == null) "No data yet" else "$total can be hit")
-                it.setTextViewText(R.id.h_chip, if (tg?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE"); it.setTextColor(R.id.h_chip, AMBER); it.setInt(R.id.h_chip, "setBackgroundResource", R.drawable.chip_amber) })
-            if (list == null || list.length() == 0) {
-                val err = tg?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }
-                add(tileView(c, Tile(if (err != null) "PROBLEM" else "NO MATCHES", "—", sub = err ?: if (tg == null) "waiting for the backend" else "loosen the filters in Wingman → Targets", color = if (err != null) STOP else DIM), now))
-            } else {
-                for (i in 0 until minOf(5, list.length())) add(targetRow(c, list.getJSONObject(i), i, now))
-            }
-            val open = Notifier.openIntent(c, "https://www.torn.com/page.php?sid=list&type=targets", 45)
-            add(row(c, 8, listOf(wbtn(c, "TARGET LIST", "target", "amber", open), refresh)))
+        // The attack list lives in Prefs "targets" (saved by Api.refresh) because the push message is too small to carry it.
+        private fun targetsData(c: Context): JSONObject? = try { JSONObject(Prefs.get(c, "targets")) } catch (e: Exception) { null }
+
+        fun targetItems(c: Context): List<JSONObject> {
+            val a = targetsData(c)?.optJSONArray("matches") ?: return emptyList()
+            return (0 until a.length()).map { a.getJSONObject(it) }
         }
 
-        private fun targetRow(c: Context, t: JSONObject, i: Int, now: Long): RemoteViews {
+        // One row of the attack list. Tapping it opens that player's attack page; you press Torn's own Attack button.
+        fun targetRow(c: Context, t: JSONObject, now: Long): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.s_target)
             v.setTextViewText(R.id.tg_name, t.optString("name"))
             val bs = t.optString("bs").takeIf { it.isNotEmpty() && it != "null" }
@@ -373,7 +368,27 @@ class WingmanWidget : AppWidgetProvider() {
             } else {
                 v.setTextViewText(R.id.tg_pill, if (hosp) "● OUT NOW" else "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go)
             }
-            v.setOnClickPendingIntent(R.id.tg_row, Notifier.openIntent(c, "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}", 50 + i))
+            v.setOnClickFillInIntent(R.id.tg_row, Intent().putExtra("url", "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}"))
+            return v
+        }
+
+        // The scrollable attack list widget.
+        private fun buildTargets(c: Context, id: Int): RemoteViews {
+            val v = RemoteViews(c.packageName, R.layout.w_targets)
+            val d = targetsData(c)
+            val total = d?.optInt("total") ?: 0
+            val err = d?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }
+            v.setTextViewText(R.id.tgt_label, "ATTACK LIST")
+            v.setTextViewText(R.id.tgt_count, if (d == null) "No data yet" else "$total can be hit")
+            v.setTextViewText(R.id.tgt_chip, if (d?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE")
+            v.setRemoteAdapter(R.id.tgt_list, Intent(c, TargetsService::class.java).apply { putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id); data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) })
+            v.setPendingIntentTemplate(R.id.tgt_list, PendingIntent.getActivity(c, 60, Intent(c, OpenActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE))
+            v.setEmptyView(R.id.tgt_list, R.id.tgt_empty)
+            v.setTextViewText(R.id.tgt_empty, err ?: if (d == null) "Waiting for the backend. Tap ⟳." else "No matches. Loosen the filters in Wingman → Targets.")
+            v.setTextColor(R.id.tgt_empty, if (err != null) STOP else DIM)
+            v.setOnClickPendingIntent(R.id.tgt_open, Notifier.openIntent(c, "https://www.torn.com/page.php?sid=list&type=targets", 45))
+            v.setOnClickPendingIntent(R.id.tgt_refresh, broadcast(c, ActionReceiver.ACTION_REFRESH, 0))
+            Prefs.get(c, "model_at").toLongOrNull()?.let { v.setTextViewText(R.id.tgt_updated, "UPDATED ${Tiles.clock(it)}") }
             return v
         }
 

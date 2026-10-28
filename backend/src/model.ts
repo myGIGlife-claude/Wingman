@@ -2,6 +2,7 @@
 import type { Cfg } from './plan.ts';
 import type { Eta } from './restock.ts';
 import type { TargetsView } from './targets.ts';
+import { targetsHash } from './logic.ts';
 
 const TORN = 'https://www.torn.com';
 export interface Primary { label: string; url: string | null; style: 'amber' | 'ghost' | 'stop' }
@@ -20,6 +21,7 @@ export interface Facts {
   flySecs: number; target: string; item: string; stock: { qty: number; cost: number; seen: number | null } | null;
   restock: { eta: number | null; overdue: boolean; everySecs: number | null; samples: number; soldOutAt: number | null } | null;
   targets: TargetsView | null;
+  targetsHash: string;
   buyMax: number | null; buyWhy: string | null; next: string | null; bought: boolean; fits: boolean | null;
 }
 interface Bar { cur: number; max: number; fullAt: number | null }
@@ -56,7 +58,7 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, 
     landAt: p.landAt ?? null, departedAt: typeof user?.travel?.departed === 'number' && user.travel.departed > 0 ? user.travel.departed : null, outbound: p.phase === 'traveling' ? !!p.outbound : null, where: abroad ? p.here?.name ?? null : p.where ?? null,
     leaveBy: p.leaveBy ?? null, flyBy: p.flyBy ?? null, flySecs: abroad ? p.flyBack : p.fly, target: p.target.name, item: cfg.item,
     stock: p.stock ? { qty: p.stock.qty, cost: p.stock.cost, seen: p.stock.update ?? null } : null,
-    targets: targets ?? null,
+    targets: targets ?? null, targetsHash: targetsHash(targets),
     restock: rs ? { eta: rs.eta, overdue: rs.overdue, everySecs: rs.every, samples: rs.samples, soldOutAt: rs.soldOutAt } : null,
     buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
     next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,

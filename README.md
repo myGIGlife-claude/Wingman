@@ -192,7 +192,7 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are sev
 | **Wingman · Trip** | Landing, leave-by and OC timers, the next trip, and the Fly or Buy button | 4×4 |
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
-| **Wingman · Targets** | Attack list: offline players from your in-game Target list you can beat, with hospital release timers | 4×5 |
+| **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges and hospital release timers | 4×5 |
 
 The all-in-one widget opens a layout editor when you add it (reopen it any time from the app's **Widget layout** button).
 
@@ -234,7 +234,7 @@ Your Target list is short. For **every offline player ranked by difficulty**, Wi
 3. Store it as a secret named `FFSCOUTER_KEY` in your Google project, then redeploy the backend: `printf %s "YOUR_FF_KEY" | gcloud secrets create FFSCOUTER_KEY --data-file=-`, then repeat the deploy command from step 7.
 4. In the app, open **Targets**, switch **Use FF Scouter** on and choose the difficulty to show (fair-fight score) (default 2.0; lower means weaker targets).
 
-Wingman asks FF Scouter for matching players every two minutes, then looks up each one's public profile through the Torn API to add hospital release times. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
+Wingman asks FF Scouter every two minutes for players at your chosen difficulty and the two steps below it (so you see a mix, easiest first), keeps the ones offline long enough, then looks up each one's public profile through the Torn API to add hospital release times. The widget list scrolls, so every match is reachable. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
 
 Tap a row to open that player's attack page. **You press Torn's own Attack button**: Wingman never attacks for you. Set the filters in the app under **Targets**.
 

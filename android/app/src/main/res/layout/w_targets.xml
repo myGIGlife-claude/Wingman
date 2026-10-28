@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/widget_bg" android:orientation="vertical" android:padding="14dp">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
+<LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+<TextView android:id="@+id/tgt_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/dim" android:fontFamily="monospace" android:letterSpacing="0.08" android:includeFontPadding="false"/>
+<TextView android:id="@+id/tgt_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="22sp" android:textColor="@color/paper" android:fontFamily="monospace" android:textStyle="bold" android:includeFontPadding="false" android:maxLines="1"/>
+</LinearLayout>
+<TextView android:id="@+id/tgt_chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/amber" android:fontFamily="monospace" android:textStyle="bold" android:letterSpacing="0.06" android:includeFontPadding="false" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:background="@drawable/chip_amber"/>
+</LinearLayout>
+<FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+<ListView android:id="@+id/tgt_list" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="@android:color/transparent" android:dividerHeight="0dp" android:scrollbars="none" android:cacheColorHint="#00000000"/>
+<TextView android:id="@+id/tgt_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center" android:textSize="13sp" android:textColor="@color/dim" android:fontFamily="monospace" android:padding="16dp"/>
+</FrameLayout>
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp" android:showDividers="middle" android:divider="@drawable/div8">
+<TextView android:id="@+id/tgt_open" android:layout_width="0dp" android:layout_weight="1" android:layout_height="46dp" android:gravity="center" android:text="TARGET LIST" android:textSize="13sp" android:textColor="@color/ink" android:fontFamily="monospace" android:textStyle="bold" android:letterSpacing="0.08" android:background="@drawable/btn_amber"/>
+<TextView android:id="@+id/tgt_refresh" android:layout_width="46dp" android:layout_height="46dp" android:gravity="center" android:text="⟳" android:textSize="20sp" android:textColor="@color/dim" android:background="@drawable/btn_ghost"/>
+</LinearLayout>
+<TextView android:id="@+id/tgt_updated" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:gravity="end" android:textSize="10sp" android:textColor="@color/dim" android:fontFamily="monospace" android:letterSpacing="0.06" android:includeFontPadding="false"/>
+</LinearLayout>

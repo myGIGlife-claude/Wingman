@@ -75,3 +75,14 @@ test('sameState ignores the model timestamp but sees real changes', () => {
   assert.equal(sameState(a, { phase: 'home', model: { updatedAt: 1, title: 'AWAY' } }), false);
   assert.equal(sameState(a, { phase: 'abroad', model: { updatedAt: 1, title: 'HOME' } }), false);
 });
+
+import { slimForPush, targetsHash } from './logic.ts';
+test('push model drops the target list but keeps a fingerprint that changes with it', () => {
+  const m = { title: 'HOME', facts: { targetsHash: 'x', targets: { total: 2, source: 'ff', matches: [{ id: 1, until: null }, { id: 2, until: 50 }] } } };
+  const slim = slimForPush(m);
+  assert.deepEqual(slim.facts.targets.matches, []); assert.equal(slim.facts.targets.total, 2); assert.equal(slim.facts.targetsHash, 'x');
+  assert.equal(JSON.stringify(slim).includes('"id"'), false);
+  assert.equal(slimForPush({ facts: { targets: null } }).facts.targets, null);
+  const a = targetsHash({ matches: [{ id: 1, until: null }] }), b = targetsHash({ matches: [{ id: 1, until: 99 }] });
+  assert.notEqual(a, b); assert.equal(targetsHash(null), '');
+});
