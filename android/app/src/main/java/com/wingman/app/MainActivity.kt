@@ -60,6 +60,7 @@ class MainActivity : Activity() {
 
     private lateinit var url: EditText; private lateinit var secret: EditText
     private lateinit var dest: Picker; private lateinit var item: Picker; private lateinit var method: Picker
+    private lateinit var tgAbove: EditText; private lateinit var tgOff: EditText
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText; private lateinit var buf: EditText
     private lateinit var xanax: Ui.Pill; private lateinit var status: TextView
     private var connected = false
@@ -130,6 +131,7 @@ class MainActivity : Activity() {
         url.setText(Prefs.get(this, "url")); secret.setText(Prefs.get(this, "secret"))
         dest = Picker(dests); method = Picker(methods); item = Picker(emptyList())
         dest.onPick = { bg { loadItems(dests[dest.index].first, ""); save() } }; item.onPick = { save() }
+        tgAbove = field("0").apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED }; tgOff = field("60", true)
         shop = field("3", true); safety = field("10", true); cap = field("29", true); buf = field("90", true)
         xanax = Ui.pill(this, true) { }
 
@@ -153,6 +155,12 @@ class MainActivity : Activity() {
             addView(button("Save settings", true) { save() })
         }
         section(col, "ALERTS", { "${alertDefs.count { alertState[it.key] ?: it.on }} of ${alertDefs.size} on" }, false) { alertsBody = this; buildAlerts(this) }
+        section(col, "TARGETS", { "level ≤ mine ${tgAbove.text.toString().toIntOrNull()?.let { if (it >= 0) "+$it" else "$it" } ?: "+0"} · offline ≥ ${tgOff.text}m" }, false) {
+            addView(mono(TextView(this@MainActivity).apply { text = "The attack widget lists players from your in-game Target list that are offline and not too strong. Other players' stats are private, so strength is judged by level." }, 12f, dim))
+            addView(label("Highest level vs yours (0 = your level or lower, -5 = at least 5 below)")); addView(tgAbove)
+            addView(label("Offline for at least (minutes)")); addView(tgOff)
+            addView(button("Save settings", true) { save() })
+        }
         section(col, "WIDGET", { "Choose what the widget shows" }, false) {
             addView(button("Widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
         }
@@ -204,7 +212,7 @@ class MainActivity : Activity() {
             dest.set(dests.indexOfFirst { it.first == j.optString("dest") }.coerceAtLeast(0))
             method.set(methods.indexOfFirst { it.first == j.optString("method") }.coerceAtLeast(0))
             shop.setText(j.optInt("shopMin", 3).toString()); safety.setText(j.optInt("safetyMin", 10).toString())
-            cap.setText(j.optInt("capacity", 29).toString()); buf.setText(j.optInt("flyBufferMin", 90).toString()); xanax.set(j.optBoolean("xanax", true))
+            cap.setText(j.optInt("capacity", 29).toString()); buf.setText(j.optInt("flyBufferMin", 90).toString()); tgAbove.setText(j.optInt("targetMaxLevelAbove", 0).toString()); tgOff.setText(j.optInt("targetMinOfflineMin", 60).toString()); xanax.set(j.optBoolean("xanax", true))
             if (al != null) alertDefs.forEach { d -> if (al.has(d.key)) alertState[d.key] = al.getBoolean(d.key) }
             document()
         }
@@ -234,7 +242,7 @@ class MainActivity : Activity() {
         val alerts = JSONObject().also { o -> alertDefs.forEach { d -> alertState[d.key]?.let { o.put(d.key, it) } } }
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
-            .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90)
+            .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90).put("targetMaxLevelAbove", tgAbove.text.toString().toIntOrNull() ?: 0).put("targetMinOfflineMin", tgOff.text.toString().toIntOrNull() ?: 60)
             .put("xanax", xanax.on).put("alerts", alerts).put("tz", java.util.TimeZone.getDefault().id)
         say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
         Api.refresh(this)

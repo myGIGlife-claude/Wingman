@@ -64,6 +64,12 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_actions" />
         </receiver>
 
+
+        <receiver android:name=".TargetsWidget" android:exported="true" android:label="@string/label_targets">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_targets" />
+        </receiver>
+
         <receiver android:name=".ActionReceiver" android:exported="false" />
 
         <service android:name=".WingmanMessaging" android:exported="false">

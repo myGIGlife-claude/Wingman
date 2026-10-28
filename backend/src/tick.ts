@@ -1,5 +1,6 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchUser, fetchOC, isKeyProblem, isRateLimit } from './torn.ts';
+import { fetchUser, fetchOC, fetchTargets, isKeyProblem, isRateLimit } from './torn.ts';
+import { compact, pickTargets } from './targets.ts';
 import { fetchYata, findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
 import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
@@ -21,6 +22,7 @@ export function plan(user: any, oc: any, cfg: any, st: any, t: number) {
 
 export async function tick(key: string): Promise<{ ok: boolean; phase?: string; note?: string }> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
+  const stored = structuredClone(st); // st is edited below; this is what the database holds
   const wall = Math.floor(Date.now() / 1000);
   if (st.backoffUntil > wall) return { ok: true, note: 'backoff' };
 
@@ -46,6 +48,12 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   if (!st.yata || t - st.yata.fetchedAt >= (watching ? 55 : 295)) {
     try { st.yata = await fetchYata(t); } catch { /* keep the cached copy; widget shows "seen Xm ago" */ }
   }
+
+  // In-game Targets list, refreshed every 2 minutes (1 to 3 API calls).
+  if (!st.targets || t - st.targets.at >= 120) {
+    try { st.targets = { at: t, list: compact(await fetchTargets(key)) }; } catch { /* keep the cached list */ }
+  }
+  const tg = st.targets ? pickTargets(st.targets.list, { myLevel: user.level ?? 0, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now: t, limit: 8 }) : undefined;
 
   let p = plan(user, oc, cfg, st, t);
 
@@ -78,7 +86,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   // The player's switches decide which alerts go out; a bad-key warning always does.
   const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null);
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(model, events); } catch (e) {
@@ -100,7 +108,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
     landedCash: landedCash ?? null, bought, sent, model, hist, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
   };
   delete (next as any).snapshot; // old versions stored the raw Torn profile here; nothing reads it
-  if (!sameState(next, st)) await saveState(next); // skip rewriting identical state
+  if (!sameState(next, stored)) await saveState(next); // skip rewriting identical state
   return { ok: true, phase: p.phase };
 }
 
@@ -114,5 +122,6 @@ export async function currentModel(key: string, fresh = false): Promise<Widget> 
   }
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
-  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null);
+  return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
+    st.targets ? pickTargets(st.targets.list, { myLevel: user.level ?? 0, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now: user.timestamp, limit: 8 }) : undefined);
 }

@@ -3,6 +3,6 @@
 export const tok = process.env.TOK, P = process.env.PROJECT, R = process.env.REGION || 'us-east1';
 if (!tok || !P) throw new Error('Set TOK (node token.mjs) and PROJECT');
 export const g = async (m, u, b, raw) => {
-  const r = await fetch(u, { method: m, headers: { authorization: `Bearer ${tok}`, ...(raw ? raw.h : { 'content-type': 'application/json' }) }, body: raw ? raw.b : b ? JSON.stringify(b) : undefined });
+  const r = await fetch(u, { method: m, headers: { authorization: `Bearer ${tok}`, 'x-goog-user-project': P, ...(raw ? raw.h : { 'content-type': 'application/json' }) }, body: raw ? raw.b : b ? JSON.stringify(b) : undefined });
   const t = await r.text(); try { return [r.status, JSON.parse(t)]; } catch { return [r.status, t]; }
 };

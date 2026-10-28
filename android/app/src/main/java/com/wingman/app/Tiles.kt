@@ -49,7 +49,7 @@ object Tiles {
 
     fun clock(epoch: Long): String = SimpleDateFormat("h:mm a", Locale.US).format(Date(epoch * 1000))
     fun dur(secs: Long): String { val h = secs / 3600; val m = (secs % 3600) / 60; return if (h > 0) "${h}h ${m.toString().padStart(2, '0')}m" else "${m}m" }
-    fun long(secs: Long): String = if (secs >= 86400) "${secs / 86400}d ${(secs % 86400) / 3600}h" else dur(secs)
+    fun long(secs: Long): String = if (secs >= 365 * 86400) "${secs / (365 * 86400)}y+" else if (secs >= 86400) "${secs / 86400}d ${(secs % 86400) / 3600}h" else dur(secs)
     fun money(n: Long): String = when {
         n >= 1_000_000_000 -> "$%.2fb".format(n / 1e9); n >= 1_000_000 -> "$%.2fm".format(n / 1e6)
         n >= 1_000 -> "$${n / 1000}k"; else -> "$$n"

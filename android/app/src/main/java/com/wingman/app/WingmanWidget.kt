@@ -22,7 +22,7 @@ class WingmanWidget : AppWidgetProvider() {
     companion object {
         // Every widget type with the part of the model it draws.
         private val KINDS = listOf(WingmanWidget::class.java to "all", StatusWidget::class.java to "status", OcWidget::class.java to "oc",
-            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions")
+            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions", TargetsWidget::class.java to "targets")
 
         fun updateAll(c: Context) {
             val m = AppWidgetManager.getInstance(c)
@@ -41,6 +41,7 @@ class WingmanWidget : AppWidgetProvider() {
                 f.optLong("flyOkUntil", 0).takeIf { it > 0 }?.let { listOf(it - 7200, it) },
                 f.optLong("ocReadyAt", 0).takeIf { it > 0 }?.let { listOf(it - 1800, it, it - 7200) },
                 f.optLong("leaveBy", 0).takeIf { it > 0 }?.let { listOf(it - 600, it) },
+                f.optJSONObject("targets")?.optJSONArray("matches")?.let { a -> (0 until a.length()).mapNotNull { i -> a.getJSONObject(i).takeIf { !it.isNull("until") }?.optLong("until") } },
             ).flatten().filter { it > now + 1 }
             val next = marks.minOrNull() ?: return
             try {
@@ -242,6 +243,7 @@ class WingmanWidget : AppWidgetProvider() {
                 statusSections(c, m, f, listOf("life", "energy", "nerve", "jail", "hospital"), now, refresh, add)
                 return v
             }
+            if (kind == "targets") { targetsSections(c, f, now, refresh, add); return v }
             if (kind == "oc") { add(panel(c, homeOc(f, now), now)); return v }
             if (kind == "stock") { add(stockCard(c, f, now)); return v }
             if (kind == "actions") { quickButtons(c, f, now, refresh, add); return v }
@@ -332,6 +334,39 @@ class WingmanWidget : AppWidgetProvider() {
                     // Extra tiles, two per row.
                     ids.filter { it in Tiles.EXTRA }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
                     quickButtons(c, f, now, refresh, add)
+        }
+
+        // Attack list: offline players you can beat. Tapping a row opens their attack page; you press Torn's own button.
+        private fun targetsSections(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            val tg = f.optJSONObject("targets")
+            val list = tg?.optJSONArray("matches")
+            val total = tg?.optInt("total") ?: 0
+            add(RemoteViews(c.packageName, R.layout.s_header).also {
+                it.setTextViewText(R.id.h_faction, "ATTACK LIST"); it.setTextViewText(R.id.h_name, if (tg == null) "No data yet" else "$total can be hit")
+                it.setTextViewText(R.id.h_chip, "● OFFLINE"); it.setTextColor(R.id.h_chip, AMBER); it.setInt(R.id.h_chip, "setBackgroundResource", R.drawable.chip_amber) })
+            if (list == null || list.length() == 0) {
+                add(tileView(c, Tile("NO MATCHES", "—", sub = if (tg == null) "waiting for the backend" else "loosen the filters in Wingman → Targets", color = DIM), now))
+            } else {
+                for (i in 0 until minOf(5, list.length())) add(targetRow(c, list.getJSONObject(i), i, now))
+            }
+            val open = Notifier.openIntent(c, "https://www.torn.com/page.php?sid=list&type=targets", 45)
+            add(row(c, 8, listOf(wbtn(c, "TARGET LIST", "target", "amber", open), refresh)))
+        }
+
+        private fun targetRow(c: Context, t: JSONObject, i: Int, now: Long): RemoteViews {
+            val v = RemoteViews(c.packageName, R.layout.s_target)
+            v.setTextViewText(R.id.tg_name, t.optString("name"))
+            v.setTextViewText(R.id.tg_sub, "Lv ${t.optInt("level")} · offline ${Tiles.long(now - t.optLong("lastAction"))}")
+            val until = if (t.isNull("until")) 0L else t.optLong("until")
+            val hosp = t.optString("state") == "Hospital"
+            if (hosp && until > now) {
+                v.setTextViewText(R.id.tg_pill, "● HOSPITAL"); v.setTextColor(R.id.tg_pill, STOP); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_stop)
+                v.setViewVisibility(R.id.tg_timer, View.VISIBLE); countdown(v, R.id.tg_timer, until - now)
+            } else {
+                v.setTextViewText(R.id.tg_pill, if (hosp) "● OUT NOW" else "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go)
+            }
+            v.setOnClickPendingIntent(R.id.tg_row, Notifier.openIntent(c, "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}", 50 + i))
+            return v
         }
 
         private fun quickButtons(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {

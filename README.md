@@ -182,7 +182,7 @@ curl -s -X POST -H "X-Tick-Key: $TICK" "$URL/tick"; echo
 8. In **Tools**, tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
 
 ### 12. Add the widgets
-Long-press your home screen, tap **Widgets** and find **Wingman**. There are six, so use only the ones you want:
+Long-press your home screen, tap **Widgets** and find **Wingman**. There are seven, so use only the ones you want:
 
 | Widget | Shows | Good size |
 |---|---|---|
@@ -192,6 +192,7 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are six
 | **Wingman · Trip** | Landing, leave-by and OC timers, the next trip, and the Fly or Buy button | 4×4 |
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
+| **Wingman · Targets** | Attack list: offline players from your in-game Target list you can beat, with hospital release timers | 4×5 |
 
 The all-in-one widget opens a layout editor when you add it (reopen it any time from the app's **Widget layout** button).
 
@@ -212,6 +213,17 @@ In Torn PDA, add `userscript/wingman.user.js` as a user script. It pre-fills the
 **Layout.** In **Widget layout** you can turn health, energy, nerve, jail, hospital and the OC panel on or off, add extra tiles (trip, stock, buy max, next step, cash, cooldowns), and pick which quick buttons appear.
 
 **Restock estimates.** Torn doesn't publish restock times. Wingman records stock changes for every foreign item and estimates the next restock from the usual gap between past ones. It needs two restocks of an item before it can estimate, and it is only as accurate as the player-reported data it sees.
+
+## The attack list
+
+The **Wingman · Targets** widget reads your in-game **Target list** (add players there in Torn as usual) and shows the ones worth hitting:
+
+- **Offline** for at least the time you choose (default 60 minutes).
+- **Not too strong.** Other players' battle stats are private, so strength is judged by **level**: their level must be at most yours plus a margin you set (default 0, meaning your level or lower; use a negative number to be stricter). Level is only a rough guide, so check a target before you attack.
+- Only players you can attack right now (**Okay**) or who are **in hospital**. Hospital players show a live countdown to their release. Players in jail, abroad or in federal jail are left out.
+- Most recently active first, so long-abandoned accounts sink to the bottom.
+
+Tap a row to open that player's attack page. **You press Torn's own Attack button**: Wingman never attacks for you. Set the filters in the app under **Targets**.
 
 ## Troubleshooting
 

@@ -10,4 +10,6 @@
     <string name="desc_stock">Your item\'s stock, price and restock estimate</string>
     <string name="label_actions">Wingman · Actions</string>
     <string name="desc_actions">Fly, Gym, Crimes and Items buttons</string>
+    <string name="label_targets">Wingman · Targets</string>
+    <string name="desc_targets">Offline players from your target list you can beat, with hospital release times</string>
 </resources>

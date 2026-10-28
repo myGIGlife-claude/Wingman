@@ -21,3 +21,14 @@ export async function fetchOC(key: string) {
   const j = await get(`https://api.torn.com/v2/user/organizedcrime?key=${key}&comment=Wingman`);
   return j.organizedCrime ?? null;
 }
+
+// The in-game Targets list, up to 300 players (3 pages). Needs only a Limited key.
+export async function fetchTargets(key: string): Promise<any[]> {
+  const out: any[] = [];
+  for (let offset = 0; offset < 300; offset += 100) {
+    const j = await get(`https://api.torn.com/v2/user/list?cat=Targets&limit=100&offset=${offset}&key=${key}&comment=Wingman`);
+    out.push(...(j.list ?? []));
+    if ((j.list ?? []).length < 100 || out.length >= (j._metadata?.total ?? 0)) break;
+  }
+  return out;
+}
