@@ -29,7 +29,7 @@ object Tiles {
         TileDef("drug", "Drug cooldown"), TileDef("booster", "Booster cooldown"), TileDef("medical", "Medical cooldown"),
     )
     val DASH = listOf(
-        DashDef("oc", "OC countdown", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
+        DashDef("oc", "OC countdown", false), DashDef("location", "Location: in Torn, abroad or flying, with ETA", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
         DashDef("xanax", "Xanax: cooldown, addiction, counts", false), DashDef("addiction", "Addiction watch: penalty and rehabs", false), DashDef("booster", "Booster cooldown", false), DashDef("medical", "Medical cooldown", false),
         DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
         DashDef("gym", "Gym button", true), DashDef("fly", "Fly button (locks near your OC)", true), DashDef("crimes", "Crimes button", true),
@@ -104,6 +104,16 @@ object Tiles {
             val cash = f.l("cash")?.let { "cash ${money(it)}" } ?: ""
             if (n == null) Tile("BUY MAX", "—", sub = "when abroad", color = DIM)
             else Tile("BUY MAX", n.toString(), sub = if (f.s("buyWhy") == "cash") "not enough cash" else cash, color = if (n > 0) GO else STOP)
+        }
+        "location" -> when (f.optString("phase")) {
+            "traveling" -> {
+                val to = f.l("landAt"); val where = f.s("where")?.uppercase() ?: "?"
+                Tile(if (f.optBoolean("outbound")) "FLYING TO $where" else "FLYING HOME", timerTo = to, sub = to?.let { "lands ${clock(it)}" } ?: "", color = AMBER)
+            }
+            "abroad" -> Tile("YOU ARE IN", f.s("where")?.uppercase() ?: "ABROAD", sub = f.l("leaveBy")?.let { "leave by ${clock(it)}" } ?: "abroad", color = YELLOW)
+            "hospital" -> Tile("YOU ARE IN", "TORN", sub = "in hospital", color = STOP)
+            "jail", "federal" -> Tile("YOU ARE IN", "TORN", sub = "in jail", color = STOP)
+            else -> Tile("YOU ARE IN", "TORN", sub = "at home", color = GO)
         }
         "oc" -> {
             val at = f.l("ocReadyAt"); val name = f.s("ocName") ?: "Not in an OC"

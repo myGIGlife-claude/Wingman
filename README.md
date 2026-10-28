@@ -193,7 +193,7 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are nin
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Buttons you choose for each widget (Fly, Gym, Crimes, Items, Spin the wheel, your own). A row when wide; stretch it to one column and the buttons stack vertically | 1×2 up to 4×1 |
 | **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges, plus your energy and hospital status on top | 3×5 |
-| **Wingman · Single** | One thing per widget, chosen when you add it: OC countdown, Xanax, addiction, energy, nerve, health, hospital, jail, cooldowns, cash, or a shortcut button (Gym, Fly, Crimes, Items, Spin the wheel, your own). Add as many as you like | 2×2 and up |
+| **Wingman · Single** | One thing per widget, chosen when you add it: your location (in Torn, abroad or flying, with landing ETA), OC countdown, Xanax, addiction, energy, nerve, health, hospital, jail, cooldowns, cash, or a shortcut button (Gym, Fly, Crimes, Items, Spin the wheel, your own). Add as many as you like | 2×2 and up |
 | **Wingman · Dashboard** | Build your own: OC countdown, bars, Xanax cooldown, addiction watch, hospital and shortcut buttons (Gym, Fly, Crimes, Items, Spin the wheel, your own Torn pages) | 3×4 |
 
 **Foldable phones:** the focused widgets can be as narrow as three columns, so on a Fold's inner screen you can put the Dashboard on one side and the Targets list on the other.

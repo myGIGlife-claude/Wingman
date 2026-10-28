@@ -23,7 +23,7 @@ class SingleActivity : Activity() {
         wid = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         val custom = try { JSONArray(Prefs.get(this, "custom")) } catch (e: Exception) { JSONArray() }
         val items = listOf(
-            "LIVE" to listOf(Item("oc", "OC countdown", "colored by how long you have"), Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("addiction", "Addiction watch", "penalty and rehabs"),
+            "LIVE" to listOf(Item("location", "Location and ETA", "in Torn, abroad or flying, with landing time"), Item("oc", "OC countdown", "colored by how long you have"), Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("addiction", "Addiction watch", "penalty and rehabs"),
                 Item("energy", "Energy", "number and bar"), Item("nerve", "Nerve", "number and bar"), Item("life", "Health", "number and bar"),
                 Item("hospital", "Hospital status", "countdown if you are in"), Item("jail", "Jail status", "countdown if you are in"),
                 Item("booster", "Booster cooldown", ""), Item("medical", "Medical cooldown", ""), Item("cash", "Cash", ""), Item("next", "Next step", "Xanax, gym, crimes or fly")),
