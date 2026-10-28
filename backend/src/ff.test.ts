@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { normalizeFF } from './ff.ts';
 import { pickTargets, type Target } from './targets.ts';
 import { sanitizeSettings } from './settings.ts';
+import { targetsView } from './tick.ts';
 
 test('normalizeFF reads either field spelling and rejects junk', () => {
   assert.deepEqual(normalizeFF({ player_id: 7, name: 'Bo', level: 22, last_action: 123, fair_fight: 1.84, bs_estimate_human: '2.1m' }), { id: 7, name: 'Bo', level: 22, lastAction: 123, ff: 1.84, bs: '2.1m' });
@@ -25,4 +26,14 @@ test('hospital players still sort by release time with FF data', () => {
 test('FF settings are validated', () => {
   assert.deepEqual(sanitizeSettings({ ffEnabled: true, ffMaxFF: 2.46 }), { ffEnabled: true, ffMaxFF: 2.5 });
   assert.deepEqual(sanitizeSettings({ ffEnabled: 'yes', ffMaxFF: 9 }), {});
+});
+
+test('the FF targets view never contains an undefined field (Firestore rejects them)', () => {
+  const now = 10_000, cfg = { ffEnabled: true, targetMaxLevelAbove: 0, targetMinOfflineMin: 60 };
+  const list = [{ id: 1, name: 'a', level: 20, state: 'Okay', until: null, lastAction: now - 7200, ff: 2, bs: '50k' }];
+  const ok = targetsView(cfg, { ff: { at: now, list } }, 40, now, 'key')!;
+  assert.equal(ok.source, 'ff'); assert.equal(ok.matches.length, 1); assert.equal('error' in ok, false);
+  assert.equal(Object.values(JSON.parse(JSON.stringify(ok))).includes(undefined), false);
+  assert.equal(targetsView(cfg, { ff: { at: now, list: [], error: 'boom' } }, 40, now, 'key')!.error, 'boom');
+  assert.equal(targetsView(cfg, {}, 40, now, '')!.error, 'FF Scouter key is not set up on the server');
 });

@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { ALERT_DEFAULTS, sanitizeSettings, SETTING_DEFAULTS, type Settings } from './settings.ts';
 
 const db = getFirestore();
+db.settings({ ignoreUndefinedProperties: true }); // an optional field left undefined must not fail the whole save
 const settingsDoc = () => db.doc('config/settings');
 const stateDoc = () => db.doc('state/current');
 

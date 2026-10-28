@@ -30,9 +30,9 @@ async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: numbe
   }
 }
 
-function targetsView(cfg: any, st: any, level: number, now: number, ffKey: string): TargetsView | undefined {
+export function targetsView(cfg: any, st: any, level: number, now: number, ffKey: string): TargetsView | undefined {
   const o = { myLevel: level, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now, limit: 8 };
-  if (cfg.ffEnabled && ffKey && st.ff) return { ...pickTargets(st.ff.list, { ...o, useFF: true }), source: 'ff', error: st.ff.error };
+  if (cfg.ffEnabled && ffKey && st.ff) return { ...pickTargets(st.ff.list, { ...o, useFF: true }), source: 'ff', ...(st.ff.error ? { error: st.ff.error } : {}) }; // Firestore rejects undefined fields
   if (cfg.ffEnabled && !ffKey) return { matches: [], total: 0, source: 'ff', error: 'FF Scouter key is not set up on the server' };
   return st.targets ? { ...pickTargets(st.targets.list, o), source: 'list' } : undefined;
 }
