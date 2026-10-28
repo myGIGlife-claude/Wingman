@@ -60,3 +60,11 @@ test('chain alert only for a live chain of 10+ with under 2 minutes left', () =>
   assert.deepEqual(chainEvents({ current: 50, left: 0 }, 1000), []);
   assert.deepEqual(chainEvents(null, 1000), []);
 });
+
+test('landing with no stock data says unknown, never sold out', () => {
+  const e = diffEvents({ phase: 'traveling', arrival: 900 }, abroad({ stock: null }), cfg, false);
+  assert.equal(e.length, 1);
+  assert.match(e[0].text, /stock unknown/);
+  assert.doesNotMatch(e[0].text, /sold out/);
+  assert.match(diffEvents({ phase: 'traveling', arrival: 900 }, abroad({ stock: { qty: 0, cost: 1, update: 900 } }), cfg, false)[0].text, /sold out/);
+});

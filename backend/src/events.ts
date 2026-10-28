@@ -33,9 +33,10 @@ export function diffEvents(prev: Prev, p: any, cfg: { item: string; tz: string }
     const arrival = prev.arrival;
     const shop = `${TORN}/index.php`;
     if (prev.phase === 'traveling') {
+      const leave = p.leaveBy ? `, leave by ${clock(p.leaveBy, cfg.tz)}` : '';
       if ((qty ?? 0) > 0) add(`land:${arrival}`, 'landed_in_stock', `${item} in stock — buy max (${n})`, shop);
-      else add(`land:${arrival}`, 'landed_sold_out',
-        `${item} sold out — watching${p.leaveBy ? `, leave by ${clock(p.leaveBy, cfg.tz)}` : ''}`, shop);
+      else if (qty === null) add(`land:${arrival}`, 'landed_sold_out', `${item} stock unknown (no stock data right now) — check the shelf${leave}`, shop); // never claim "sold out" without data
+      else add(`land:${arrival}`, 'landed_sold_out', `${item} sold out — watching${leave}`, shop);
     } else if (!bought && prev.qty === 0 && (qty ?? 0) > 0) {
       add(`restock:${arrival}:${p.stock.update}`, 'restock', `${item} back in stock — buy max (${n})`, shop);
     }
