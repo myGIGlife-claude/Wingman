@@ -24,7 +24,8 @@ export async function sharedYata(now: number, maxAge = 55): Promise<YataSnapshot
   }
   // A cold instance starts from the last copy saved in the database, so a slow YATA cannot leave a tick without stock data.
   if (!yata) { try { yata = ((await yataDoc().get()).data() as YataSnapshot | undefined) ?? null; } catch { /* fall through */ } }
-  if (!yata && inflight) await inflight; // nothing saved either: the very first fetch has to finish
+  // Nothing saved either: give the first fetch a moment, then carry on without stock data. It keeps running and fills in for the next tick.
+  if (!yata && inflight) await Promise.race([inflight, new Promise(r => setTimeout(r, 1500))]);
   return yata;
 }
 
