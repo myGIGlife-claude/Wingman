@@ -65,6 +65,14 @@ export function plan(user: any, oc: any, cfg: any, st: any, t: number) {
 }
 
 export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; phase?: string; note?: string }> {
+  const t0 = Date.now(), steps: Record<string, number> = {};
+  const timed = async <T>(name: string, p: Promise<T>): Promise<T> => { const s0 = Date.now(); try { return await p; } finally { steps[name] = Date.now() - s0; } };
+  try { return await tickInner({ uid, key, ffKey }, timed); } finally {
+    if (Date.now() - t0 > 5000) console.warn('slow tick', uid, Date.now() - t0, 'ms', JSON.stringify(steps)); // names the slow outside call
+  }
+}
+
+async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: Promise<T>) => Promise<T>): Promise<{ ok: boolean; phase?: string; note?: string }> {
   const [cfg, st] = await Promise.all([getSettings(uid), getState(uid)]);
   const stored = structuredClone(st); // st is edited below; this is what the database holds
   if (st.hist) { await seedHistFrom(st.hist); delete st.hist; } // older versions kept restock history per player; it is shared now
@@ -73,7 +81,7 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
 
   let user: any, oc: any;
   try {
-    [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
+    [user, oc] = await timed('torn_user_oc', Promise.all([fetchUser(key), fetchOC(key)]));
   } catch (e: any) {
     if (isRateLimit(e)) { await saveState(uid, { ...st, backoffUntil: wall + 120 }); return { ok: false, note: 'rate limited' }; }
     if (isKeyProblem(e)) {
@@ -89,16 +97,16 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
   const t: number = user.timestamp ?? wall; // server time corrects clock offset
 
   // Stock reports and restock history are shared by all players and fetched once a minute for the whole server.
-  st.yata = await sharedYata(t);
-  const hist = await sharedHist();
+  st.yata = await timed('yata', sharedYata(t));
+  const hist = await timed('hist', sharedHist());
 
   // In-game Targets list, refreshed every 2 minutes (1 to 3 API calls).
   if (!st.targets || t - st.targets.at >= 120) {
-    try { st.targets = { at: t, list: compact(await fetchTargets(key)) }; } catch { /* keep the cached list */ }
+    try { st.targets = { at: t, list: compact(await timed('targets', fetchTargets(key))) }; } catch { /* keep the cached list */ }
   }
-  await refreshFF(key, ffKey, cfg, st, t);
+  await timed('ff', refreshFF(key, ffKey, cfg, st, t));
   const addictionBefore = st.extra?.addiction;
-  await refreshExtra(key, st, t);
+  await timed('extra', refreshExtra(key, st, t));
   const tg = targetsView(cfg, st, user.level ?? 0, t, ffKey);
 
   let p = plan(user, oc, cfg, st, t);
@@ -134,12 +142,12 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
   const awardBefore = st.awards;
   if (!alertOn(cfg, 'award_earned')) delete st.awards; // counts go stale while the alert is off
   if (alertOn(cfg, 'award_earned') && (!st.awards || t - st.awards.at >= 600)) {
-    try { st.awards = { at: t, ...(await fetchAwards(key)) }; } catch { /* try again in 10 minutes */ st.awards = { ...(st.awards ?? { medals: null, honors: null }), at: t }; }
+    try { st.awards = { at: t, ...(await timed('awards', fetchAwards(key))) }; } catch { /* try again in 10 minutes */ st.awards = { ...(st.awards ?? { medals: null, honors: null }), at: t }; }
   }
   // Chain watch: polled every tick while a chain runs and every 5 minutes otherwise. A key without faction access is not asked again for an hour.
   if (!(st.chainOffUntil > t) && (!st.chain || t - st.chain.at >= (st.chain.current > 0 ? 30 : 300))) {
     try {
-      const c = await fetchChain(key, t);
+      const c = await timed('chain', fetchChain(key, t));
       st.chain = { at: t, current: c?.current ?? 0, max: c?.max ?? 0, endAt: c ? Math.round((t + c.left) / 5) * 5 : null }; // rounded so the widget is not re-sent for a second of drift
     } catch (e: any) { if (!isRateLimit(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } }
   }
@@ -149,7 +157,7 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
   const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain });
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
-    try { await push(uid, slimForPush(model), events); } catch (e) {
+    try { await timed('push', push(uid, slimForPush(model), events)); } catch (e) {
       // Keep the old phase/model so the same events and widget update are tried again next tick.
       console.error('push failed', e);
       await saveState(uid, { ...st, learned: st.learned });

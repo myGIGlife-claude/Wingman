@@ -3,7 +3,7 @@ import type { Stock } from './plan.ts';
 export interface YataSnapshot { fetchedAt: number; stocks: Record<string, { update: number; stocks: { id: number; name: string; quantity: number; cost: number }[] }> }
 
 export async function fetchYata(now: number): Promise<YataSnapshot> {
-  const r = await fetch('https://yata.yt/api/v1/travel/export/', { signal: AbortSignal.timeout(10_000) });
+  const r = await fetch('https://yata.yt/api/v1/travel/export/', { signal: AbortSignal.timeout(6_000) });
   if (!r.ok) throw new Error(`yata ${r.status}`);
   const j: any = await r.json();
   return { fetchedAt: now, stocks: j.stocks ?? {} };

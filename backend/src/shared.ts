@@ -9,11 +9,13 @@ const histDoc = () => db.doc('shared/hist');
 let yata: YataSnapshot | null = null;
 let hist: Record<string, Hist> = {};
 let histLoaded = 0;
+let failedAt = 0;
 
 // Fetches YATA at most once per maxAge seconds for the whole process. A failed fetch keeps the last copy (the widget shows "seen Xm ago").
 export async function sharedYata(now: number, maxAge = 55): Promise<YataSnapshot | null> {
-  if (!yata || now - yata.fetchedAt >= maxAge) {
-    try { yata = await fetchYata(now); await learn(yata); } catch { /* keep the cached copy */ }
+  // After a failed fetch, leave YATA alone for a minute: a slow or down YATA must not stall every tick for its full timeout.
+  if ((!yata || now - yata.fetchedAt >= maxAge) && now - failedAt >= 60) {
+    try { yata = await fetchYata(now); await learn(yata); } catch { failedAt = now; /* keep the cached copy */ }
   }
   return yata;
 }
