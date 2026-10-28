@@ -1,0 +1,150 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - heading "Gate Resolve, the next look" [level=1] [ref=e3]
+    - paragraph [ref=e4]: A boarding pass for the home screen, one timeline for the whole journey, a live map you can read at a glance, and a letter that is ready when you are. Same brand, calmer hierarchy, one primary action per screen.
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Home
+      - generic [ref=e8]:
+        - generic [ref=e9]: 9:41
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - heading "Trips" [level=2] [ref=e16]
+            - generic [ref=e17]: + Add flight
+          - generic [ref=e18]:
+            - generic [ref=e19]: Upcoming
+            - generic [ref=e20]: Active
+            - generic [ref=e21]: History
+          - generic [ref=e22]:
+            - generic [ref=e23]:
+              - generic [ref=e24]: Delayed 4h
+              - generic [ref=e28]: TP 217 · Today
+            - generic [ref=e29]:
+              - generic [ref=e30]:
+                - generic [ref=e31]: LIS
+                - generic [ref=e32]: Lisbon
+                - generic [ref=e33]: Showers 64°
+              - generic [ref=e40]:
+                - generic [ref=e41]: BOS
+                - generic [ref=e42]: Boston
+                - generic [ref=e43]: Cloudy 70°
+            - separator [ref=e47]
+            - generic [ref=e48]:
+              - generic [ref=e49]:
+                - generic [ref=e50]: Departs
+                - generic [ref=e51]: 5:04 PM
+                - text: was 1:04 PM
+                - generic [ref=e52]: Boards 4:29 PM
+              - generic [ref=e53]:
+                - generic [ref=e54]: Arrives
+                - generic [ref=e55]: 7:04 PM
+                - text: was 3:04 PM
+            - generic [ref=e56]: Security about 18 min. Be there by 2:45 PM.
+          - generic [ref=e63]:
+            - heading "What to do now" [level=3] [ref=e64]
+            - list [ref=e65]:
+              - listitem [ref=e66]:
+                - generic [ref=e67]: "1"
+                - generic [ref=e68]: Go to the gate or service desk now.
+              - listitem [ref=e69]:
+                - generic [ref=e70]: "2"
+                - generic [ref=e71]: Ask what caused the delay.
+              - listitem [ref=e72]:
+                - generic [ref=e73]: "3"
+                - generic [ref=e74]: Keep receipts for meals and a hotel.
+            - generic [ref=e75]:
+              - generic [ref=e76]: "EU261: €600 may apply.Four hours late on arrival."
+              - generic [ref=e77]: Ask TAP
+        - generic [ref=e78]:
+          - generic [ref=e79]: Trips
+          - generic [ref=e82]: Requests
+          - generic [ref=e86]: Settings
+    - generic [ref=e90]:
+      - paragraph [ref=e91]: Journey
+      - generic [ref=e92]:
+        - generic [ref=e93]: 9:41
+        - generic [ref=e98]:
+          - generic [ref=e99]: Trips
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]: AUS → ORD
+              - generic [ref=e105]: UA 2114 · Today
+            - generic [ref=e106]: 1h 40m late
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: 6:15 PM
+              - generic [ref=e111]:
+                - heading "Leave for the airport" [level=4] [ref=e112]
+                - paragraph [ref=e113]: Security wait is about 18 min. Austin is clear, 78°.
+            - generic [ref=e114]:
+              - generic [ref=e115]: 7:29 PM
+              - generic [ref=e117]:
+                - heading "Boarding, Gate B22" [level=4] [ref=e118]
+                - paragraph [ref=e119]: Boards 7:29 PM 5:49 PM
+            - generic [ref=e120]:
+              - generic [ref=e121]: 8:04 PM
+              - generic [ref=e123]:
+                - heading "Departs Austin" [level=4] [ref=e124]
+                - paragraph [ref=e125]: 6:24 PM New time from the airline
+            - generic [ref=e126]:
+              - generic [ref=e127]: 10:44 PM
+              - generic [ref=e129]:
+                - heading "Lands in Chicago" [level=4] [ref=e130]
+                - paragraph [ref=e131]: "9:04 PM Gate K7, Terminal 2. Chicago: rain, 54°."
+          - generic [ref=e132]:
+            - heading "Your connection to UA 588 is tight" [level=3] [ref=e133]
+            - paragraph [ref=e134]: You land at 10:44 PM and UA 588 leaves at 11:19 PM. Walk from K7 to the next gate, about 12 min.
+            - generic [ref=e135]: 35 min to change planes
+          - generic [ref=e136]: Track on map
+        - generic [ref=e137]:
+          - generic [ref=e138]: Trips
+          - generic [ref=e141]: Requests
+          - generic [ref=e145]: Settings
+    - generic [ref=e149]:
+      - paragraph [ref=e150]: Live map
+      - generic [ref=e151]:
+        - generic [ref=e152]: 9:41
+        - generic [ref=e157]:
+          - generic [ref=e158]: UA 2114
+          - img [ref=e162]:
+            - generic [ref=e173]: AUS
+            - generic [ref=e174]: ORD
+          - generic [ref=e175]:
+            - generic [ref=e177]:
+              - generic [ref=e178]: Over Missouri
+              - generic [ref=e179]: On its way
+            - generic [ref=e180]:
+              - generic [ref=e181]:
+                - generic [ref=e182]: Altitude
+                - text: 36,000 ft
+              - generic [ref=e183]:
+                - generic [ref=e184]: Speed
+                - text: 483 kt
+              - generic [ref=e185]:
+                - generic [ref=e186]: Lands
+                - text: 10:44 PM
+            - generic [ref=e187]:
+              - generic [ref=e188]: Share with someone
+              - generic [ref=e189]: Send link
+            - generic [ref=e190]: Map from OpenStreetMap. Positions from public ADS-B data.
+    - generic [ref=e191]:
+      - paragraph [ref=e192]: Request
+      - generic [ref=e193]:
+        - generic [ref=e194]: 9:41
+        - generic [ref=e199]:
+          - generic [ref=e200]:
+            - generic [ref=e201]: Back
+            - generic [ref=e204]: 5 of 5
+          - heading "Your letter is ready" [level=2] [ref=e211]
+          - generic [ref=e212]: You may be owed compensation. Send this to TAP Air Portugal.
+          - generic [ref=e213]:
+            - generic [ref=e214]: Booking code
+            - text: TP4K2Q
+          - generic [ref=e215]:
+            - paragraph [ref=e216]: Dear TAP Air Portugal Customer Relations,
+            - paragraph [ref=e217]: I am writing about flight TP 217 from LIS to BOS on October 21, 2026 (confirmation TP4K2Q). It arrived 4 hours late. I was told the cause was a mechanical issue.
+            - paragraph [ref=e218]: I paid for meals and can send receipts. Under Regulation (EC) No 261/2004 I am requesting compensation of €600.
+          - generic [ref=e219]: 104 words. Written from a fixed template, not by AI.
+          - generic [ref=e223]: Copy letter
+          - generic [ref=e224]: Open the airline's form
+  - paragraph [ref=e225]: "Concept screens with sample data. Brand tokens are unchanged: Overpass, ink, sign yellow, one status color per state. Gates, times and the EU261 line are examples, not live flights."

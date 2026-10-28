@@ -49,7 +49,12 @@ export function diffEvents(prev: Prev, p: any, cfg: { item: string; tz: string }
 }
 
 // Status alerts: fire when a flag flips. A missing previous flag (first run) never fires.
-export interface Flags { energy: boolean; nerve: boolean; life: boolean; drug: boolean; booster: boolean; medical: boolean; hospital: boolean; jail: boolean }
+export interface Flags { energy: boolean; nerve: boolean; life: boolean; drug: boolean; booster: boolean; medical: boolean; hospital: boolean; jail: boolean; medLow?: boolean; boosterLow?: boolean }
+
+// A cooldown counts as "low" in its last 6 hours, so the player can plan the next dose.
+export const LOW_CD_SECS = 6 * 3600;
+// Abroad longer than this triggers the optional "stay abroad too long" alert.
+export const ABROAD_LONG_SECS = 2 * 3600;
 
 export function statusEvents(prev: Partial<Flags> | undefined, now: Flags, t: number): Evt[] {
   if (!prev) return [];
@@ -64,7 +69,32 @@ export function statusEvents(prev: Partial<Flags> | undefined, now: Flags, t: nu
   if (rose('drug')) add('drug_ready', 'Drug cooldown is over', `${TORN}/item.php`);
   if (rose('booster')) add('booster_ready', 'Booster cooldown is over', `${TORN}/item.php`);
   if (rose('medical')) add('medical_ready', 'Medical cooldown is over', `${TORN}/item.php`);
+  if (rose('medLow')) add('medical_low', 'Medical cooldown is under 6 hours', `${TORN}/item.php`);
+  if (rose('boosterLow')) add('booster_low', 'Booster cooldown is under 6 hours', `${TORN}/item.php`);
   if (fell('hospital')) add('hospital_out', 'You are out of the hospital', null);
   if (fell('jail')) add('jail_out', 'You are out of jail', null);
   return out;
+}
+
+// Optional alert: still abroad long after landing. One per trip.
+export function abroadLongEvents(p: any, arrival: number | null | undefined, t: number): Evt[] {
+  if (p.phase !== 'abroad' || !arrival || t - arrival < ABROAD_LONG_SECS) return [];
+  const h = Math.floor((t - arrival) / 3600);
+  return [{ key: `abroad_long:${arrival}`, type: 'abroad_long', text: `Still in ${p.here?.name ?? 'a foreign country'} after ${h}h`, url: `${TORN}/travelagency.php` }];
+}
+
+// Medals and honors earned since the last look. A missing count on either side never fires.
+export function awardEvents(prev: { medals?: number | null; honors?: number | null } | undefined, now: { medals: number | null; honors: number | null }): Evt[] {
+  if (!prev) return [];
+  const out: Evt[] = [];
+  const up = (a: number | null | undefined, b: number | null) => typeof a === 'number' && typeof b === 'number' && b > a;
+  if (up(prev.medals, now.medals)) out.push({ key: `medal:${now.medals}`, type: 'award_earned', text: 'New medal earned', url: `${TORN}/page.php?sid=awards` });
+  if (up(prev.honors, now.honors)) out.push({ key: `honor:${now.honors}`, type: 'award_earned', text: 'New honor earned', url: `${TORN}/page.php?sid=awards` });
+  return out;
+}
+
+// Chain about to run out: a live chain of 10+ hits with under 2 minutes left.
+export function chainEvents(ch: { current: number; left: number } | null | undefined, t: number): Evt[] {
+  if (!ch || ch.current < 10 || ch.left <= 0 || ch.left > 120) return [];
+  return [{ key: `chain:${Math.floor(t / 300)}`, type: 'chain_expiring', text: `Chain at ${ch.current} runs out in ${ch.left}s`, url: `${TORN}/factions.php` }];
 }

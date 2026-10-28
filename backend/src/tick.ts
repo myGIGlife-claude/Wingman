@@ -1,10 +1,10 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
+import { fetchAwards, fetchChain, fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
 import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
 import { findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
-import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
+import { diffEvents, statusEvents, abroadLongEvents, awardEvents, chainEvents, LOW_CD_SECS, type Evt, type Flags } from './events.ts';
 import { alertOn } from './settings.ts';
 import { getSettings, getState, saveState } from './store.ts';
 import { sharedYata, sharedHist, seedHistFrom } from './shared.ts';
@@ -123,13 +123,24 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
   const bar = (b: any) => !!b && b.maximum > 0 && b.current >= b.maximum;
   const cd = user.cooldowns || {};
   const flags: Flags = { energy: bar(user.energy), nerve: bar(user.nerve), life: bar(user.life), drug: !(cd.drug > 0), booster: !(cd.booster > 0), medical: !(cd.medical > 0),
+    medLow: cd.medical > 0 && cd.medical <= LOW_CD_SECS, boosterLow: cd.booster > 0 && cd.booster <= LOW_CD_SECS,
     hospital: p.phase === 'hospital' || (user.states?.hospital_timestamp ?? 0) > t, jail: p.phase === 'jail' || (user.states?.jail_timestamp ?? 0) > t };
   // The player's switches decide which alerts go out; a bad-key warning always does.
   // Addiction watcher: a more negative penalty than before means your addiction went up.
   const nowAddiction = st.extra?.addiction;
   const addictionEvents: Evt[] = typeof addictionBefore === 'number' && typeof nowAddiction === 'number' && nowAddiction < addictionBefore
     ? [{ key: `addiction:${nowAddiction}`, type: 'addiction_up', text: `Addiction rose to ${nowAddiction}%${st.extra.addictionLabel ? ` (${st.extra.addictionLabel})` : ''}`, url: null }] : [];
-  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
+  // Optional alerts that cost extra Torn calls are only fetched when the player has switched them on.
+  const awardBefore = st.awards;
+  if (!alertOn(cfg, 'award_earned')) delete st.awards; // counts go stale while the alert is off
+  if (alertOn(cfg, 'award_earned') && (!st.awards || t - st.awards.at >= 600)) {
+    try { st.awards = { at: t, ...(await fetchAwards(key)) }; } catch { /* try again in 10 minutes */ st.awards = { ...(st.awards ?? { medals: null, honors: null }), at: t }; }
+  }
+  let chain: { current: number; left: number } | null = null;
+  if (alertOn(cfg, 'chain_expiring') && !(st.chainOffUntil > t)) {
+    try { chain = await fetchChain(key, t); } catch (e: any) { if (!isRateLimit(e)) st.chainOffUntil = t + 3600; } // no faction access: stop asking for an hour
+  }
+  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
   const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, st.extra);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });

@@ -1,0 +1,58 @@
+- generic [active] [ref=f2e1]:
+  - banner [ref=f2e2]:
+    - generic [ref=f2e3]:
+      - link "Wingman" [ref=f2e4] [cursor=pointer]:
+        - /url: /
+      - navigation [ref=f2e5]:
+        - link "Join the test" [ref=f2e6] [cursor=pointer]:
+          - /url: /#test
+        - link "Privacy" [ref=f2e7] [cursor=pointer]:
+          - /url: /privacy.html
+        - link "Terms" [ref=f2e8] [cursor=pointer]:
+          - /url: /terms.html
+  - main [ref=f2e9]:
+    - heading "Know when to leave. Never miss an OC run." [level=1] [ref=f2e10]
+    - paragraph [ref=f2e11]: "Wingman watches your Torn account and tells you what to do next: when to fly out, when stock lands, and when your organized crime is ready. It shows it on an Android home-screen widget and sends alerts to your phone."
+    - list [ref=f2e12]:
+      - listitem [ref=f2e13]:
+        - strong [ref=f2e14]: Travel and OC timing.
+        - text: Works out when to leave so you are back before your crime is ready.
+      - listitem [ref=f2e15]:
+        - strong [ref=f2e16]: Restock tracking.
+        - text: Learns how often an item restocks and tells you when the next one is due.
+      - listitem [ref=f2e17]:
+        - strong [ref=f2e18]: Targets.
+        - text: Lists players that fit your level and difficulty, with hospital and offline times.
+      - listitem [ref=f2e19]:
+        - strong [ref=f2e20]: Your choice of alerts.
+        - text: Turn each alert on or off. Energy, nerve, cooldowns and more are optional.
+    - paragraph [ref=f2e21]: Wingman only reads your data through the official Torn API. It never plays the game for you. You tap every action yourself.
+    - region [ref=f2e22]:
+      - heading "Join the Android test" [level=2] [ref=f2e23]
+      - paragraph [ref=f2e24]: Wingman is in testing. Leave the email address you use with Google Play and we will add you to the test group and send you the download link.
+      - generic [ref=f2e25]:
+        - generic [ref=f2e26]: Email address
+        - textbox "Email address" [ref=f2e27]
+        - generic [ref=f2e28]: Website
+        - textbox [ref=f2e29]
+        - button "Request access" [ref=f2e30] [cursor=pointer]
+        - status [ref=f2e31]
+        - paragraph [ref=f2e32]:
+          - text: We use your address only to add you to the test and to contact you about it. See the
+          - link "privacy policy" [ref=f2e33] [cursor=pointer]:
+            - /url: /privacy.html
+          - text: .
+  - contentinfo [ref=f2e34]:
+    - generic [ref=f2e35]:
+      - paragraph [ref=f2e36]: Wingman, powered by myGIGlife INC.
+      - generic [ref=f2e37]:
+        - text: 813 Oak St, Ste 10 - 1190Conway, AR 72032
+        - link "wingman@mygig.life" [ref=f2e38] [cursor=pointer]:
+          - /url: mailto:wingman@mygig.life
+      - paragraph [ref=f2e39]: Wingman is an independent tool. It is not made by, affiliated with, or endorsed by Torn.
+      - paragraph [ref=f2e40]:
+        - link "Privacy policy" [ref=f2e41] [cursor=pointer]:
+          - /url: /privacy.html
+        - text: ·
+        - link "Terms of use" [ref=f2e42] [cursor=pointer]:
+          - /url: /terms.html

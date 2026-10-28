@@ -1,0 +1,20 @@
+- generic [active] [ref=f1e1]:
+  - heading "Directory listing for /" [level=1] [ref=f1e2]
+  - separator [ref=f1e3]
+  - list [ref=f1e4]:
+    - listitem [ref=f1e5]:
+      - link "bundle.strings" [ref=f1e6] [cursor=pointer]:
+        - /url: bundle.strings
+    - listitem [ref=f1e7]:
+      - link "mac_check.sh" [ref=f1e8] [cursor=pointer]:
+        - /url: mac_check.sh
+    - listitem [ref=f1e9]:
+      - link "TripBoardWidget.kt.orig" [ref=f1e10] [cursor=pointer]:
+        - /url: TripBoardWidget.kt.orig
+    - listitem [ref=f1e11]:
+      - link "widget-mock.html" [ref=f1e12] [cursor=pointer]:
+        - /url: widget-mock.html
+    - listitem [ref=f1e13]:
+      - link "x/" [ref=f1e14] [cursor=pointer]:
+        - /url: x/
+  - separator [ref=f1e15]

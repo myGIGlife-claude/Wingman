@@ -37,17 +37,22 @@ class MainActivity : Activity() {
         AlertDef("leave_soon", "Leave within 5 minutes", "Last warning to make your OC", "TRAVEL"),
         AlertDef("leave_now", "Leave now", "Fly home now to make your OC", "TRAVEL"),
         AlertDef("landed_home", "Back in Torn", "You landed at home", "TRAVEL"),
+        AlertDef("abroad_long", "Abroad too long", "You are still abroad 2 hours after landing", "TRAVEL", false),
         AlertDef("oc_ready", "OC ready", "Stay in Torn, your OC is ready", "YOUR STATUS"),
         AlertDef("hospital_out", "Out of hospital", "You were released", "YOUR STATUS"),
         AlertDef("jail_out", "Out of jail", "You were released", "YOUR STATUS"),
         AlertDef("addiction_up", "Addiction increased", "Your drug addiction penalty went up", "YOUR STATUS"),
         AlertDef("life_full", "Health full", "Your life bar is full", "YOUR STATUS", false),
+        AlertDef("award_earned", "New medal or honor", "You earned a medal or honor (checked every 10 minutes)", "YOUR STATUS", false),
+        AlertDef("chain_expiring", "Chain about to break", "Your faction chain has under 2 minutes left (needs faction access on your key)", "YOUR STATUS", false),
         AlertDef("step_ready", "Xanax, gym or crimes ready", "Your next home step is ready", "BARS AND COOLDOWNS"),
         AlertDef("energy_full", "Energy full", "Your energy bar is full", "BARS AND COOLDOWNS", false),
         AlertDef("nerve_full", "Nerve full", "Your nerve bar is full", "BARS AND COOLDOWNS", false),
         AlertDef("drug_ready", "Drug cooldown over", "You can take a drug again", "BARS AND COOLDOWNS", false),
         AlertDef("booster_ready", "Booster cooldown over", "You can use a booster again", "BARS AND COOLDOWNS", false),
         AlertDef("medical_ready", "Medical cooldown over", "You can use a medical item again", "BARS AND COOLDOWNS", false),
+        AlertDef("medical_low", "Medical cooldown under 6 hours", "Time to plan your next medical item", "BARS AND COOLDOWNS", false),
+        AlertDef("booster_low", "Booster cooldown under 6 hours", "Time to plan your next booster", "BARS AND COOLDOWNS", false),
     )
     private val alertState = mutableMapOf<String, Boolean>().also { m -> alertDefs.forEach { m[it.key] = it.on } }
     private var alertsBody: LinearLayout? = null

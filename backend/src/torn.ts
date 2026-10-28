@@ -76,3 +76,19 @@ export async function verifyKey(key: string): Promise<{ id: number; name: string
   await fetchOC(key);
   return { id: Number(j.player_id), name: String(j.name ?? '') };
 }
+
+// Counts of medals and honors earned. Null when Torn's reply has neither list, so the caller never alerts on a guess.
+export async function fetchAwards(key: string): Promise<{ medals: number | null; honors: number | null }> {
+  const j = await get(`https://api.torn.com/user/?selections=medals,honors&key=${key}&comment=Wingman`);
+  const n = (a: unknown, t: unknown) => Array.isArray(a) ? a.length : t && typeof t === 'object' ? Object.keys(t).length : null;
+  return { medals: n(j.medals_awarded, j.medals_time), honors: n(j.honors_awarded, j.honors_time) };
+}
+
+// The player's faction chain, or null when they have none or the key cannot read it. left is seconds until it breaks.
+export async function fetchChain(key: string, now: number): Promise<{ current: number; left: number } | null> {
+  const j = await get(`https://api.torn.com/faction/?selections=chain&key=${key}&comment=Wingman`);
+  const c = j.chain;
+  if (!c || !(c.current > 0)) return null;
+  const to = Number(c.timeout);
+  return Number.isFinite(to) ? { current: Number(c.current), left: to > 1e9 ? to - now : to } : null;
+}
