@@ -6,6 +6,7 @@ import { observe, type Hist } from './restock.ts';
 // Stock reports and restock history are the same for every player, so they are fetched and stored once, not per user.
 const db = getFirestore();
 const histDoc = () => db.doc('shared/hist');
+const yataDoc = () => db.doc('shared/yata');
 let yata: YataSnapshot | null = null;
 let hist: Record<string, Hist> = {};
 let histLoaded = 0;
@@ -18,10 +19,12 @@ let inflight: Promise<void> | null = null;
 export async function sharedYata(now: number, maxAge = 55): Promise<YataSnapshot | null> {
   if ((!yata || now - yata.fetchedAt >= maxAge) && now - failedAt >= 60 && !inflight) {
     inflight = (async () => {
-      try { yata = await fetchYata(now); await learn(yata); } catch { failedAt = now; /* keep the cached copy */ } finally { inflight = null; }
+      try { yata = await fetchYata(now); yataDoc().set(yata).catch(e => console.error('yata save failed', e?.message)); await learn(yata); } catch { failedAt = now; /* keep the cached copy */ } finally { inflight = null; }
     })();
   }
-  if (!yata && inflight) await inflight; // nothing cached yet: this first fetch has to finish
+  // A cold instance starts from the last copy saved in the database, so a slow YATA cannot leave a tick without stock data.
+  if (!yata) { try { yata = ((await yataDoc().get()).data() as YataSnapshot | undefined) ?? null; } catch { /* fall through */ } }
+  if (!yata && inflight) await inflight; // nothing saved either: the very first fetch has to finish
   return yata;
 }
 
