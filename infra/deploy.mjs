@@ -18,14 +18,17 @@ for (let i = 0; i < 60; i++) {
 }
 const base = `https://run.googleapis.com/v2/projects/${P}/locations/${R}/services`;
 const sec = n => ({ name: n, valueSource: { secretKeyRef: { secret: n, version: 'latest' } } });
+const names = ['TORN_API_KEY', 'APP_SECRET', 'TICK_SECRET'];
+if ((await g('GET', `https://secretmanager.googleapis.com/v1/projects/${P}/secrets/FFSCOUTER_KEY`))[0] === 200) names.push('FFSCOUTER_KEY'); // optional FF Scouter key
 const [gs, svc] = await g('GET', `${base}/wingman-backend`);
 if (gs === 200) {
   svc.template.annotations = { ...(svc.template.annotations || {}), nonce: String(Date.now()) }; // forces a new revision
   svc.template.revision = undefined;
+  svc.template.containers[0].env = names.map(sec); // keeps the secret list in step with what exists
   [s, j] = await g('PATCH', `${base}/wingman-backend?updateMask=template`, { template: svc.template });
 } else {
   [s, j] = await g('POST', `${base}?serviceId=wingman-backend`, { template: { maxInstanceRequestConcurrency: 1, timeout: '30s', scaling: { minInstanceCount: 0, maxInstanceCount: 1 },
-    containers: [{ image: img, env: ['TORN_API_KEY', 'APP_SECRET', 'TICK_SECRET'].map(sec), resources: { limits: { memory: '512Mi', cpu: '1' } } }] } });
+    containers: [{ image: img, env: names.map(sec), resources: { limits: { memory: '512Mi', cpu: '1' } } }] } });
 }
 console.log('service', s, s >= 300 ? JSON.stringify(j).slice(0, 400) : 'rollout started');
 const [, cur] = await g('GET', `${base}/wingman-backend`);

@@ -6,8 +6,8 @@ export const ALERT_DEFAULTS: Record<string, boolean> = {
   landed_home: true, step_ready: true, oc_ready: true, hospital_out: true, jail_out: true,
   energy_full: false, nerve_full: false, life_full: false, drug_ready: false, booster_ready: false, medical_ready: false,
 };
-export type Settings = Cfg & { tz: string; alerts: Record<string, boolean>; targetMaxLevelAbove: number; targetMinOfflineMin: number };
-export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York', alerts: {}, targetMaxLevelAbove: 0, targetMinOfflineMin: 60 };
+export type Settings = Cfg & { tz: string; alerts: Record<string, boolean>; targetMaxLevelAbove: number; targetMinOfflineMin: number; ffEnabled: boolean; ffMaxFF: number };
+export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York', alerts: {}, targetMaxLevelAbove: 0, targetMinOfflineMin: 60, ffEnabled: false, ffMaxFF: 2.5 };
 export const alertOn = (cfg: { alerts?: Record<string, boolean> }, type: string) => cfg.alerts?.[type] ?? ALERT_DEFAULTS[type] ?? true;
 
 const int = (v: unknown, lo: number, hi: number) => {
@@ -30,6 +30,8 @@ export function sanitizeSettings(s: any): Partial<Settings> {
   const cap = int(s.capacity, 1, 200); if (cap !== undefined) out.capacity = cap;
   const above = Number(s.targetMaxLevelAbove); if (Number.isInteger(above) && above >= -100 && above <= 100) out.targetMaxLevelAbove = above;
   const off = int(s.targetMinOfflineMin, 0, 10080); if (off !== undefined) out.targetMinOfflineMin = off;
+  if (typeof s.ffEnabled === 'boolean') out.ffEnabled = s.ffEnabled;
+  const maxff = Number(s.ffMaxFF); if (Number.isFinite(maxff) && maxff >= 1 && maxff <= 3) out.ffMaxFF = Math.round(maxff * 10) / 10;
   const buf = int(s.flyBufferMin, 0, 600); if (buf !== undefined) out.flyBufferMin = buf;
   if (typeof s.xanax === 'boolean') out.xanax = s.xanax;
   if (validTz(s.tz)) out.tz = s.tz;

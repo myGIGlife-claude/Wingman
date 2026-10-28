@@ -343,9 +343,10 @@ class WingmanWidget : AppWidgetProvider() {
             val total = tg?.optInt("total") ?: 0
             add(RemoteViews(c.packageName, R.layout.s_header).also {
                 it.setTextViewText(R.id.h_faction, "ATTACK LIST"); it.setTextViewText(R.id.h_name, if (tg == null) "No data yet" else "$total can be hit")
-                it.setTextViewText(R.id.h_chip, "● OFFLINE"); it.setTextColor(R.id.h_chip, AMBER); it.setInt(R.id.h_chip, "setBackgroundResource", R.drawable.chip_amber) })
+                it.setTextViewText(R.id.h_chip, if (tg?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE"); it.setTextColor(R.id.h_chip, AMBER); it.setInt(R.id.h_chip, "setBackgroundResource", R.drawable.chip_amber) })
             if (list == null || list.length() == 0) {
-                add(tileView(c, Tile("NO MATCHES", "—", sub = if (tg == null) "waiting for the backend" else "loosen the filters in Wingman → Targets", color = DIM), now))
+                val err = tg?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }
+                add(tileView(c, Tile(if (err != null) "PROBLEM" else "NO MATCHES", "—", sub = err ?: if (tg == null) "waiting for the backend" else "loosen the filters in Wingman → Targets", color = if (err != null) STOP else DIM), now))
             } else {
                 for (i in 0 until minOf(5, list.length())) add(targetRow(c, list.getJSONObject(i), i, now))
             }
@@ -356,7 +357,14 @@ class WingmanWidget : AppWidgetProvider() {
         private fun targetRow(c: Context, t: JSONObject, i: Int, now: Long): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.s_target)
             v.setTextViewText(R.id.tg_name, t.optString("name"))
-            v.setTextViewText(R.id.tg_sub, "Lv ${t.optInt("level")} · offline ${Tiles.long(now - t.optLong("lastAction"))}")
+            val bs = t.optString("bs").takeIf { it.isNotEmpty() && it != "null" }
+            v.setTextViewText(R.id.tg_sub, "Lv ${t.optInt("level")}${if (bs != null) " · ~$bs" else ""} · offline ${Tiles.long(now - t.optLong("lastAction"))}")
+            // Difficulty badge from FF Scouter: green is easy, yellow is fair, red is hard.
+            if (!t.isNull("ff")) {
+                val ff = t.optDouble("ff"); val k = if (ff <= 2.0) "go" else if (ff <= 2.6) "yellow" else "stop"
+                v.setViewVisibility(R.id.tg_ff, View.VISIBLE); v.setTextViewText(R.id.tg_ff, "FF\n%.1f".format(ff))
+                v.setTextColor(R.id.tg_ff, rgb(k)); v.setInt(R.id.tg_ff, "setBackgroundResource", chipBg(k))
+            }
             val until = if (t.isNull("until")) 0L else t.optLong("until")
             val hosp = t.optString("state") == "Hospital"
             if (hosp && until > now) {

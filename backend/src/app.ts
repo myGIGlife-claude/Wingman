@@ -10,7 +10,7 @@ const same = (a: unknown, b: string) => {
   return x.length === y.length && timingSafeEqual(x, y);
 };
 
-export function buildApp(S: { tornKey: string; appSecret: string; tickSecret: string }, logger = true) {
+export function buildApp(S: { tornKey: string; appSecret: string; tickSecret: string; ffKey?: string }, logger = true) {
   const app = Fastify({ logger });
   const TORN_API_KEY = S.tornKey, APP_SECRET = S.appSecret, TICK_SECRET = S.tickSecret;
   app.addContentTypeParser('*', { parseAs: 'string' }, (_r, body, done) => {
@@ -21,9 +21,9 @@ export function buildApp(S: { tornKey: string; appSecret: string; tickSecret: st
     if (!ok) return reply.code(401).send({ error: 'unauthorized' });
   });
 
-  app.post('/tick', async () => tick(TORN_API_KEY));
+  app.post('/tick', async () => tick(TORN_API_KEY, S.ffKey));
   app.post('/register', async req => { const b: any = req.body; await addDevice(String(b.fcmToken), String(b.platform ?? 'android')); return { ok: true }; });
-  app.get('/state', async req => currentModel(TORN_API_KEY, (req.query as any).fresh === '1'));
+  app.get('/state', async req => currentModel(TORN_API_KEY, (req.query as any).fresh === '1', S.ffKey));
   app.get('/settings', async () => getSettings());
   app.put('/settings', async req => { await putSettings(req.body as any); return getSettings(); });
   app.post('/bought', async () => { await setBought(true); return { ok: true }; });

@@ -32,3 +32,8 @@ export async function fetchTargets(key: string): Promise<any[]> {
   }
   return out;
 }
+
+// One player's public profile (name, level, status, last action). Used to add hospital times to FF Scouter's list.
+export async function fetchProfile(key: string, id: number): Promise<any> {
+  return get(`https://api.torn.com/user/${id}?selections=profile&key=${key}&comment=Wingman`);
+}

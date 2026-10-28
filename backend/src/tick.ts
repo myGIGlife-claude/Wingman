@@ -1,6 +1,7 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchUser, fetchOC, fetchTargets, isKeyProblem, isRateLimit } from './torn.ts';
-import { compact, pickTargets } from './targets.ts';
+import { fetchUser, fetchOC, fetchTargets, fetchProfile, isKeyProblem, isRateLimit } from './torn.ts';
+import { compact, pickTargets, type TargetsView } from './targets.ts';
+import { fetchFFTargets, FFError } from './ff.ts';
 import { fetchYata, findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
 import { diffEvents, statusEvents, type Evt, type Flags } from './events.ts';
@@ -12,6 +13,28 @@ import { observe, estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
 
+// FF Scouter list, refreshed every 2 minutes: players that fit your difficulty cap, plus their public profile for hospital times.
+async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: number) {
+  if (!cfg.ffEnabled || !ffKey || (st.ff && t - st.ff.at < 120 && st.ff.maxff === cfg.ffMaxFF)) return;
+  try {
+    const rows = (await fetchFFTargets(ffKey, { maxff: cfg.ffMaxFF, limit: 20, inactiveOnly: true })).slice(0, 20);
+    const list = (await Promise.all(rows.map(async r => {
+      const p = await fetchProfile(key, r.id).catch(() => null);
+      return p ? { ...compact([{ id: r.id, ...p }])[0], ff: r.ff, bs: r.bs } : null;
+    }))).filter(Boolean);
+    st.ff = { at: t, maxff: cfg.ffMaxFF, list };
+  } catch (e: any) {
+    st.ff = { at: t, maxff: cfg.ffMaxFF, list: st.ff?.list ?? [], error: e instanceof FFError ? (e.code === 6 ? 'FF Scouter key is not registered' : e.message) : 'FF Scouter unreachable' };
+  }
+}
+
+function targetsView(cfg: any, st: any, level: number, now: number, ffKey: string): TargetsView | undefined {
+  const o = { myLevel: level, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now, limit: 8 };
+  if (cfg.ffEnabled && ffKey && st.ff) return { ...pickTargets(st.ff.list, { ...o, useFF: true }), source: 'ff', error: st.ff.error };
+  if (cfg.ffEnabled && !ffKey) return { matches: [], total: 0, source: 'ff', error: 'FF Scouter key is not set up on the server' };
+  return st.targets ? { ...pickTargets(st.targets.list, o), source: 'list' } : undefined;
+}
+
 // Build the plan from live data. Shared by /tick and /state.
 export function plan(user: any, oc: any, cfg: any, st: any, t: number) {
   const first = computePlan({ user, oc, cfg, t, learned: st.learned });
@@ -20,7 +43,7 @@ export function plan(user: any, oc: any, cfg: any, st: any, t: number) {
   return computePlan({ user, oc, cfg, t, learned: st.learned, stock });
 }
 
-export async function tick(key: string): Promise<{ ok: boolean; phase?: string; note?: string }> {
+export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phase?: string; note?: string }> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
   const stored = structuredClone(st); // st is edited below; this is what the database holds
   const wall = Math.floor(Date.now() / 1000);
@@ -53,7 +76,8 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
   if (!st.targets || t - st.targets.at >= 120) {
     try { st.targets = { at: t, list: compact(await fetchTargets(key)) }; } catch { /* keep the cached list */ }
   }
-  const tg = st.targets ? pickTargets(st.targets.list, { myLevel: user.level ?? 0, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now: t, limit: 8 }) : undefined;
+  await refreshFF(key, ffKey, cfg, st, t);
+  const tg = targetsView(cfg, st, user.level ?? 0, t, ffKey);
 
   let p = plan(user, oc, cfg, st, t);
 
@@ -113,7 +137,7 @@ export async function tick(key: string): Promise<{ ok: boolean; phase?: string; 
 }
 
 // Fresh widget model without side effects (GET /state).
-export async function currentModel(key: string, fresh = false): Promise<Widget> {
+export async function currentModel(key: string, fresh = false, ffKey = ''): Promise<Widget> {
   const [cfg, st] = await Promise.all([getSettings(), getState()]);
   const [user, oc] = await Promise.all([fetchUser(key), fetchOC(key)]);
   // A manual refresh pulls new stock too, but at most every 20 seconds so taps cannot hammer YATA.
@@ -123,5 +147,5 @@ export async function currentModel(key: string, fresh = false): Promise<Widget> 
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
-    st.targets ? pickTargets(st.targets.list, { myLevel: user.level ?? 0, maxAbove: cfg.targetMaxLevelAbove, minOfflineSecs: cfg.targetMinOfflineMin * 60, now: user.timestamp, limit: 8 }) : undefined);
+    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey));
 }

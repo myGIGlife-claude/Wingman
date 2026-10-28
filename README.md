@@ -223,6 +223,19 @@ The **Wingman · Targets** widget reads your in-game **Target list** (add player
 - Only players you can attack right now (**Okay**) or who are **in hospital**. Hospital players show a live countdown to their release. Players in jail, abroad or in federal jail are left out.
 - Most recently active first, so long-abandoned accounts sink to the bottom.
 
+### Optional: all offline players, with difficulty (FF Scouter)
+
+Your Target list is short. For **every offline player ranked by difficulty**, Wingman can use [FF Scouter](https://ffscouter.com), a community service that estimates each player's strength and gives a fair-fight (FF) score. Each row then shows a badge: **green is easy, yellow is fair, red is hard**, plus the estimated stats.
+
+**This sends a key to a third-party site.** Only turn it on if you are happy with that:
+
+1. In Torn, create a **separate API key with Public access only**. Do not use your main key.
+2. Register that key at [ffscouter.com](https://ffscouter.com) (follow their sign-up).
+3. Store it as a secret named `FFSCOUTER_KEY` in your Google project, then redeploy the backend: `printf %s "YOUR_FF_KEY" | gcloud secrets create FFSCOUTER_KEY --data-file=-`, then repeat the deploy command from step 7.
+4. In the app, open **Targets**, switch **Use FF Scouter** on and choose the hardest fair-fight score you accept (default 2.5; lower is easier).
+
+Wingman asks FF Scouter for matching players every two minutes, then looks up each one's public profile through the Torn API to add hospital release times. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
+
 Tap a row to open that player's attack page. **You press Torn's own Attack button**: Wingman never attacks for you. Set the filters in the app under **Targets**.
 
 ## Troubleshooting
