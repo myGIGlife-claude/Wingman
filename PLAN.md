@@ -18,6 +18,7 @@ Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exi
 - [x] Public tester sign-up endpoint (/testers) + website (private repo ~/projects/wingman-site, Cloudflare Pages)
 - [x] v1.15.0: Dashboard builder tabs (Layout, Travel, Bars, Cooldowns, OC, Status, Shortcuts); new optional alerts: medical/booster under 6h, abroad too long, new medal/honor, chain about to break (award/chain Torn reply shapes UNVERIFIED, no alert on missing data)
 - [ ] Next from feature research: NPC loot timers (YATA /api/v1/loot reachable), stock exchange helper, faction OC readiness, trains available, inventory worth, rental filter
+- [ ] Website download link: parked until launch (Jonathan, 2026-10-28). Options were Play test link / direct APK / emailed link.
 - [ ] Android: sign-up/token screen, in-app delete account (Play requires it + a web deletion link)
 - [ ] Own FF estimate from attack logs (replace ffscouter.com)
 - [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
