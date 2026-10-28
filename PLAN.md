@@ -21,8 +21,8 @@ Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exi
 - [ ] Website download link: parked until launch (Jonathan, 2026-10-28). Options were Play test link / direct APK / emailed link.
 - [x] v1.17.0 Account screen: invite sign-up, Torn key check (what works, Full-access warning), change key, delete account, sign out. Backend: POST /keycheck, PUT /key, GET /me. Secrets now exist; Torn key-info reply shape unverified (level shows unknown if absent)
 - [ ] Web deletion link for Google Play (a page on the site that explains how to delete an account)
-- [x] Own FF estimate from your attack history (ffestimate.ts): target rows show the FF you last got and a stats floor. Attack/battlestats reply shapes UNVERIFIED; run infra/probe-shapes.mjs with a real key and compare.
-- [ ] Skipped, with reasons: NPC loot timers (YATA loot feed has April timestamps, stale), stock exchange helper and faction OC readiness (reply shapes unknown, need the probe output), trains available, inventory worth, rental filter
+- [x] Own FF estimate from your attack history (ffestimate.ts): target rows show the FF you last got and a stats floor. Verified against the real API 2026-10-28 (probe-shapes.mjs): attacks (modifiers.fair_fight), battlestats (+total), key info (access_level), faction chain, medals/honors arrays.
+- [ ] Skipped, with reasons: NPC loot timers (YATA loot feed has April timestamps, stale); stock exchange benefit alerts (v1 user/stocks has only shares and transactions, no benefit-ready info); faction OC readiness (v2 faction/crimes returns error 7 for the owner key); inventory worth (v1 inventory selection is gone, v2 shape unknown); trains available, rental filter (no verified source)
 - [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
 
 ## Decisions
