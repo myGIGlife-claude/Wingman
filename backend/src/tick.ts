@@ -17,7 +17,9 @@ const SENT_TTL = 3 * 86400;
 async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: number) {
   if (!cfg.ffEnabled || !ffKey || (st.ff && t - st.ff.at < 120 && st.ff.maxff === cfg.ffMaxFF)) return;
   try {
-    const rows = (await fetchFFTargets(ffKey, { maxff: cfg.ffMaxFF, limit: 20, inactiveOnly: true })).slice(0, 20);
+    // FF Scouter already gives name, level, difficulty and last action. Only players offline long enough need a profile lookup (for hospital time).
+    const rows = (await fetchFFTargets(ffKey, { maxff: cfg.ffMaxFF, limit: 50 }))
+      .filter(r => r.lastAction > 0 && t - r.lastAction >= cfg.targetMinOfflineMin * 60).slice(0, 20);
     const list = (await Promise.all(rows.map(async r => {
       const p = await fetchProfile(key, r.id).catch(() => null);
       return p ? { ...compact([{ id: r.id, ...p }])[0], ff: r.ff, bs: r.bs } : null;

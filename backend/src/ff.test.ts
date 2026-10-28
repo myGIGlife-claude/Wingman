@@ -5,8 +5,8 @@ import { pickTargets, type Target } from './targets.ts';
 import { sanitizeSettings } from './settings.ts';
 
 test('normalizeFF reads either field spelling and rejects junk', () => {
-  assert.deepEqual(normalizeFF({ player_id: 7, fair_fight: 1.84, bs_estimate_human: '2.1m' }), { id: 7, ff: 1.84, bs: '2.1m' });
-  assert.deepEqual(normalizeFF({ id: '9', ff: '2.5' }), { id: 9, ff: 2.5, bs: null });
+  assert.deepEqual(normalizeFF({ player_id: 7, name: 'Bo', level: 22, last_action: 123, fair_fight: 1.84, bs_estimate_human: '2.1m' }), { id: 7, name: 'Bo', level: 22, lastAction: 123, ff: 1.84, bs: '2.1m' });
+  assert.deepEqual(normalizeFF({ id: '9', ff: '2.5' }), { id: 9, name: '', level: 0, lastAction: 0, ff: 2.5, bs: null });
   assert.equal(normalizeFF({ player_id: 'x' }), null);
   assert.equal(normalizeFF(null), null);
 });

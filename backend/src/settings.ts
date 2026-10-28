@@ -7,7 +7,7 @@ export const ALERT_DEFAULTS: Record<string, boolean> = {
   energy_full: false, nerve_full: false, life_full: false, drug_ready: false, booster_ready: false, medical_ready: false,
 };
 export type Settings = Cfg & { tz: string; alerts: Record<string, boolean>; targetMaxLevelAbove: number; targetMinOfflineMin: number; ffEnabled: boolean; ffMaxFF: number };
-export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York', alerts: {}, targetMaxLevelAbove: 0, targetMinOfflineMin: 60, ffEnabled: false, ffMaxFF: 2.5 };
+export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York', alerts: {}, targetMaxLevelAbove: 0, targetMinOfflineMin: 60, ffEnabled: false, ffMaxFF: 2 };
 export const alertOn = (cfg: { alerts?: Record<string, boolean> }, type: string) => cfg.alerts?.[type] ?? ALERT_DEFAULTS[type] ?? true;
 
 const int = (v: unknown, lo: number, hi: number) => {

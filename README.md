@@ -232,7 +232,7 @@ Your Target list is short. For **every offline player ranked by difficulty**, Wi
 1. In Torn, create a **separate API key with Public access only**. Do not use your main key.
 2. Register that key at [ffscouter.com](https://ffscouter.com) (follow their sign-up).
 3. Store it as a secret named `FFSCOUTER_KEY` in your Google project, then redeploy the backend: `printf %s "YOUR_FF_KEY" | gcloud secrets create FFSCOUTER_KEY --data-file=-`, then repeat the deploy command from step 7.
-4. In the app, open **Targets**, switch **Use FF Scouter** on and choose the hardest fair-fight score you accept (default 2.5; lower is easier).
+4. In the app, open **Targets**, switch **Use FF Scouter** on and choose the difficulty to show (fair-fight score) (default 2.0; lower means weaker targets).
 
 Wingman asks FF Scouter for matching players every two minutes, then looks up each one's public profile through the Torn API to add hospital release times. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
 
