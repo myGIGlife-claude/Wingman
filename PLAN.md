@@ -1,10 +1,10 @@
-Last updated: 2026-10-24 00:20 UTC
+Last updated: 2026-10-28 03:00 UTC
 
 ## Goal
 Wingman (Torn OC run helper): GCP backend (tick every minute) + Android widget/FCM app + PDA userscript v1.1. Spec: `uploads/wingman-build-spec.md`. Hard rule: API-only, never automate game actions.
 
 ## Current task
-Android app (widget, FCM, settings, CI).
+Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exists). Next: Android app sign-up/token screen, then own FF estimate to replace ffscouter.
 
 ## Tasks
 - [x] Backend: plan.ts + tests (11 pass)
@@ -14,6 +14,11 @@ Android app (widget, FCM, settings, CI).
 - [x] infra: backend deployed (Cloud Run wingman-backend, scheduler wingman-tick every min, secrets). Verified live: /tick 200, phase=home
 - [x] Firebase app registered (google-services.json kept local, gitignored)
 - [x] README
+- [x] Backend multi-user (accounts, per-user tokens, encrypted keys, per-user data, fan-out tick, shared YATA/restock)
+- [x] Public tester sign-up endpoint (/testers) + website (private repo ~/projects/wingman-site, Cloudflare Pages)
+- [ ] Android: sign-up/token screen, in-app delete account (Play requires it + a web deletion link)
+- [ ] Own FF estimate from attack logs (replace ffscouter.com)
+- [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
 
 ## Decisions
 - 2026-10-24: No workers attached, no gcloud/firebase CLI on server; building code myself. GCP work goes through the clauderc service account (cannot grant roles or link billing).
@@ -23,5 +28,9 @@ Android app (widget, FCM, settings, CI).
 
 - 2026-10-24: Figma designs for widget states and app screens: https://www.figma.com/design/FmUYycRA0WJanbNAgYNtxB (Wingman UI). Next: apply the look in code.
 
+- 2026-10-28: Multi-user on Cloud Run + Firestore. Owner keeps legacy doc paths (no migration). Sign-up closed until INVITE_CODE secret exists; KEY_ENC_SECRET secret must exist first (creating secrets was blocked in auto mode; Jonathan or an allowed session creates it).
+
 ## Known issues
+- KEY_ENC_SECRET and INVITE_CODE secrets not created yet, so account sign-up is off (owner still works).
+- Torn per-IP API limit with many users unverified; tick budget 22s, 6 workers (about 30-60 users per tick).
 - Need from Jonathan: link billing to `wingman-oc` in console; Torn API key (Limited) via cLaudeRC. Region assumed us-east1.
