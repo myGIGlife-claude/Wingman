@@ -25,6 +25,22 @@ object Api {
         } catch (e: Exception) { null }
     }
 
+    // Like call, but returns the status code and body even for errors (0 when offline), can send extra headers, and can skip the key (sign-up).
+    fun send(c: Context, method: String, path: String, body: String? = null, headers: Map<String, String> = emptyMap(), auth: Boolean = true, baseUrl: String? = null): Pair<Int, String> {
+        val base = (baseUrl ?: Prefs.get(c, "url")).trimEnd('/')
+        if (base.isEmpty()) return 0 to ""
+        return try {
+            val h = URL(base + path).openConnection() as HttpURLConnection
+            h.requestMethod = method; h.connectTimeout = 15000; h.readTimeout = 30000
+            if (auth) Prefs.get(c, "secret").takeIf { it.isNotEmpty() }?.let { h.setRequestProperty("X-Wingman-Key", it) }
+            headers.forEach { (k, v) -> h.setRequestProperty(k, v) }
+            val payload = body ?: if (method == "POST" || method == "PUT") "{}" else null
+            if (payload != null) { h.doOutput = true; h.setRequestProperty("Content-Type", "application/json"); h.outputStream.use { it.write(payload.toByteArray()) } }
+            val code = h.responseCode
+            code to ((if (code in 200..299) h.inputStream else h.errorStream)?.bufferedReader()?.readText().orEmpty())
+        } catch (e: Exception) { 0 to "" }
+    }
+
     // Fetch the model, store it and redraw the widget. fresh also pulls new stock data. Returns false when it failed.
     fun refresh(c: Context, fresh: Boolean = false): Boolean {
         val s = call(c, "GET", if (fresh) "/state?fresh=1" else "/state") ?: return false

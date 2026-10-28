@@ -6,7 +6,7 @@ export class TornError extends Error {
 export const isKeyProblem = (e: unknown) => e instanceof TornError && [2, 10, 13].includes(e.code);
 export const isRateLimit = (e: unknown) => e instanceof TornError && e.code === 5;
 
-async function get(url: string) {
+export async function get(url: string) {
   const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
   const j: any = await r.json();
   if (j?.error) throw new TornError(j.error.code, j.error.error);
@@ -91,4 +91,16 @@ export async function fetchChain(key: string, now: number): Promise<{ current: n
   if (!c || !(c.current > 0)) return null;
   const to = Number(c.timeout);
   return Number.isFinite(to) ? { current: Number(c.current), max: Number(c.max) || 0, left: to > 1e9 ? to - now : to } : null;
+}
+
+// One light call to the Targets list, for the key check (fetchTargets reads up to 3 pages).
+export const probeTargets = (key: string) => get(`https://api.torn.com/v2/user/list?cat=Targets&limit=1&key=${key}&comment=Wingman`);
+
+// Access level of a key as Torn reports it, or null when the reply has none.
+export async function fetchKeyLevel(key: string): Promise<number | null> {
+  const j = await get(`https://api.torn.com/key/?selections=info&key=${key}&comment=Wingman`);
+  const n = Number(j.access_level);
+  if (Number.isInteger(n) && n >= 1 && n <= 4) return n;
+  const t = String(j.access_type ?? '').toLowerCase();
+  return t.startsWith('public') ? 1 : t.startsWith('minimal') ? 2 : t.startsWith('limited') ? 3 : t.startsWith('full') ? 4 : null;
 }

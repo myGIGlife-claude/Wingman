@@ -7,6 +7,7 @@ import { DESTS } from './plan.ts';
 import { push } from './fcm.ts';
 import { encrypt, hashToken, newToken } from './crypto.ts';
 import { verifyKey, TornError } from './torn.ts';
+import { checkKey } from './keycheck.ts';
 import { sharedYata } from './shared.ts';
 
 const same = (a: unknown, b: string) => {
@@ -33,7 +34,14 @@ export function buildApp(S: AppSecrets, logger = true) {
   const SITE = 'https://wingman.mygig.life';
   const testerTries = new Map<string, { n: number; reset: number }>();
 
-  // Every route except /tick and /signup needs a player: the owner's shared secret, or a personal token from /signup.
+  // Who a request is: the owner's shared secret, or a personal token from /signup. Null when neither.
+  const resolve = async (k: string): Promise<Ctx | null> => {
+    if (k && S.appSecret && same(k, S.appSecret) && S.tornKey) return ownerCtx(S);
+    const u = k.length >= 32 ? await userByTokenHash(hashToken(k)) : undefined;
+    return u && u.active !== false ? userCtx(u, S) : null;
+  };
+
+  // Every route except /tick, /signup, /testers and /keycheck needs a player.
   app.decorateRequest('ctx', null);
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?')[0];
@@ -44,10 +52,8 @@ export function buildApp(S: AppSecrets, logger = true) {
       if (req.method === 'OPTIONS') return reply.code(204).send();
       return;
     }
-    const k = String(req.headers['x-wingman-key'] ?? '');
-    if (k && S.appSecret && same(k, S.appSecret) && S.tornKey) { (req as any).ctx = ownerCtx(S); return; }
-    const u = k.length >= 32 ? await userByTokenHash(hashToken(k)) : undefined;
-    const ctx = u?.active !== false && u ? userCtx(u, S) : null;
+    const ctx = await resolve(String(req.headers['x-wingman-key'] ?? ''));
+    if (path === '/keycheck') { (req as any).ctx = ctx; return; } // the handler decides: a signed-in player, or an invite code before sign-up
     if (!ctx) return reply.code(401).send({ error: 'unauthorized' });
     (req as any).ctx = ctx;
   });
@@ -71,7 +77,7 @@ export function buildApp(S: AppSecrets, logger = true) {
     if (!Number.isInteger(p.id) || p.id <= 0) return reply.code(502).send({ error: 'unexpected reply from Torn' });
     const uid = `p${p.id}`, token = newToken(), old = await getUser(uid);
     // Signing up again with the same key replaces the token (lost phone) and turns the account back on.
-    await putUser({ uid, name: p.name, tornKeyEnc: encrypt(key, S.encSecret), tokenHash: hashToken(token), active: true, hasDevice: old?.hasDevice ?? false, lastTickAt: old?.lastTickAt ?? 0, createdAt: old?.createdAt ?? Math.floor(Date.now() / 1000) });
+    await putUser({ uid, name: p.name, tornKeyEnc: encrypt(key, S.encSecret), tokenHash: hashToken(token), keyLast4: key.slice(-4), active: true, hasDevice: old?.hasDevice ?? false, lastTickAt: old?.lastTickAt ?? 0, createdAt: old?.createdAt ?? Math.floor(Date.now() / 1000) });
     return { token, name: p.name };
   });
 
@@ -86,7 +92,36 @@ export function buildApp(S: AppSecrets, logger = true) {
     return { ok: true };
   });
 
-  app.get('/me', async req => { const c = ctxOf(req); return { id: c.uid, ffKey: !!c.ffKey }; });
+  app.get('/me', async req => {
+    const c = ctxOf(req), u = c.uid === OWNER ? undefined : await getUser(c.uid);
+    return { id: c.uid, name: u?.name ?? null, ffKey: !!c.ffKey, keyLast4: u?.keyLast4 ?? null, keyLevel: u?.keyLevel ?? null };
+  });
+
+  // Shows what a Torn key can do for Wingman. A signed-in player checks their stored key (or tries a new one); before sign-up it needs the invite code.
+  const checkTries = new Map<string, { n: number; reset: number }>();
+  app.post('/keycheck', async (req, reply) => {
+    const c = (req as any).ctx as Ctx | null, b: any = req.body ?? {};
+    let key = String(b.tornKey ?? '').trim();
+    if (!key && c) key = c.key;
+    else if (!c && (!S.inviteCode || !same(req.headers['x-invite-code'], S.inviteCode))) return reply.code(403).send({ error: 'invalid invite code' });
+    if (!/^[A-Za-z0-9]{16}$/.test(key)) return reply.code(400).send({ error: 'enter your 16-character Torn API key' });
+    const id = c?.uid ?? req.ip, now = Date.now(), t = checkTries.get(id);
+    if (!t || t.reset < now) checkTries.set(id, { n: 1, reset: now + 60_000 }); else if (++t.n > 6) return reply.code(429).send({ error: 'too many checks, wait a minute' });
+    return checkKey(key);
+  });
+
+  // Replace the stored Torn key. It must belong to the same player, and pass the core checks.
+  app.put('/key', async (req, reply) => {
+    const c = ctxOf(req), b: any = req.body ?? {};
+    if (c.uid === OWNER) return reply.code(400).send({ error: 'the owner key is set on the server' });
+    const key = String(b.tornKey ?? '').trim();
+    if (!/^[A-Za-z0-9]{16}$/.test(key)) return reply.code(400).send({ error: 'enter your 16-character Torn API key' });
+    const report = await checkKey(key);
+    if (!report.ok || !report.player) return reply.code(400).send({ error: 'Torn rejected the key or it cannot read what Wingman needs', report });
+    if (`p${report.player.id}` !== c.uid) return reply.code(400).send({ error: 'that key belongs to a different player', report });
+    await putUser({ uid: c.uid, tornKeyEnc: encrypt(key, S.encSecret), keyLast4: key.slice(-4), keyLevel: report.level, active: true });
+    return { ok: true, report };
+  });
   // Removes the account and everything stored for it.
   app.delete('/account', async (req, reply) => {
     const c = ctxOf(req);

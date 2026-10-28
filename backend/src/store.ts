@@ -33,7 +33,7 @@ export async function listDevices(uid: string): Promise<string[]> {
 export const removeDevice = (uid: string, token: string) => paths(uid).devices.doc(encodeURIComponent(token)).delete();
 
 // ---- Accounts (everyone except the owner) ----
-export interface UserRec { uid: string; name: string; tornKeyEnc: string; ffKeyEnc?: string; tokenHash: string; active: boolean; hasDevice: boolean; lastTickAt: number; createdAt: number }
+export interface UserRec { uid: string; name: string; tornKeyEnc: string; ffKeyEnc?: string; tokenHash: string; keyLast4?: string; keyLevel?: string; active: boolean; hasDevice: boolean; lastTickAt: number; createdAt: number }
 export const userDoc = (uid: string) => db.doc(`users/${uid}`);
 export const getUser = async (uid: string) => (await userDoc(uid).get()).data() as UserRec | undefined;
 export const putUser = (u: Partial<UserRec> & { uid: string }) => userDoc(u.uid).set(u, { merge: true });

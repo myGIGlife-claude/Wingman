@@ -146,6 +146,10 @@ class MainActivity : Activity() {
             addView(label("Backend URL")); addView(url); addView(label("App secret")); addView(secret)
             addView(button("Connect and load", true) { connect() })
         }
+        section(col, "ACCOUNT", { if (Prefs.get(this, "secret").isEmpty()) "Not signed in" else "Torn key, sign-up and sign-out" }, false) {
+            addView(mono(TextView(this@MainActivity).apply { text = "Sign up with an invite code, check what your Torn key can do, change it, or delete your account." }, 12f, dim))
+            addView(button("Account and Torn key", true) { startActivity(Intent(this@MainActivity, AccountActivity::class.java)) })
+        }
         section(col, "TRIP", { "${dest.shown.ifEmpty { "—" }} · ${if (item.key.isEmpty()) "no item" else item.key} · ${method.shown.substringBefore(" (")}" }, false) {
             addView(label("Destination")); addView(dest); addView(label("Item to buy")); addView(item); addView(label("Flight type")); addView(method)
         }

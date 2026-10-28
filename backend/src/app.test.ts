@@ -41,3 +41,20 @@ test('tester form rejects bad addresses, silently drops bots, and answers CORS f
   assert.equal((await a.inject({ method: 'POST', url: '/testers', payload: { email: 'nope' } })).statusCode, 400);
   assert.equal((await a.inject({ method: 'POST', url: '/testers', payload: { email: 'bot@example.com', website: 'x' } })).statusCode, 200);
 });
+
+test('key check needs an invite code before sign-up, and PUT /key needs a signed-in player', async () => {
+  const a = buildApp({ ...base, encSecret: 'enc', inviteCode: 'inv' }, false);
+  assert.equal((await a.inject({ method: 'POST', url: '/keycheck', payload: { tornKey: 'aaaaaaaaaaaaaaaa' } })).statusCode, 403);
+  assert.equal((await a.inject({ method: 'POST', url: '/keycheck', headers: { 'x-invite-code': 'wrong' }, payload: { tornKey: 'aaaaaaaaaaaaaaaa' } })).statusCode, 403);
+  assert.equal((await a.inject({ method: 'POST', url: '/keycheck', headers: { 'x-invite-code': 'inv' }, payload: { tornKey: 'short' } })).statusCode, 400);
+  assert.equal((await a.inject({ method: 'PUT', url: '/key', payload: { tornKey: 'aaaaaaaaaaaaaaaa' } })).statusCode, 401);
+  const closed = buildApp({ ...base, encSecret: 'enc' }, false);
+  assert.equal((await closed.inject({ method: 'POST', url: '/keycheck', headers: { 'x-invite-code': 'inv' }, payload: { tornKey: 'aaaaaaaaaaaaaaaa' } })).statusCode, 403);
+});
+
+test('the owner can check the server key but not replace it', async () => {
+  const a = buildApp({ ...base, encSecret: 'enc' }, false);
+  const r = await a.inject({ method: 'PUT', url: '/key', headers: { 'x-wingman-key': 'app-secret' }, payload: { tornKey: 'aaaaaaaaaaaaaaaa' } });
+  assert.equal(r.statusCode, 400);
+  assert.match(r.json().error, /set on the server/);
+});
