@@ -11,12 +11,17 @@ let hist: Record<string, Hist> = {};
 let histLoaded = 0;
 let failedAt = 0;
 
-// Fetches YATA at most once per maxAge seconds for the whole process. A failed fetch keeps the last copy (the widget shows "seen Xm ago").
+// Keeps one YATA copy for the whole process. Once a copy exists, a refresh runs in the background and ticks use the cached one,
+// so a slow or down YATA never stalls them; only the very first fetch is awaited. After a failure it waits a minute before trying again.
+// shortcut: Cloud Run may pause CPU between requests, so a background refresh can finish a tick late. Fine at one tick a minute.
+let inflight: Promise<void> | null = null;
 export async function sharedYata(now: number, maxAge = 55): Promise<YataSnapshot | null> {
-  // After a failed fetch, leave YATA alone for a minute: a slow or down YATA must not stall every tick for its full timeout.
-  if ((!yata || now - yata.fetchedAt >= maxAge) && now - failedAt >= 60) {
-    try { yata = await fetchYata(now); await learn(yata); } catch { failedAt = now; /* keep the cached copy */ }
+  if ((!yata || now - yata.fetchedAt >= maxAge) && now - failedAt >= 60 && !inflight) {
+    inflight = (async () => {
+      try { yata = await fetchYata(now); await learn(yata); } catch { failedAt = now; /* keep the cached copy */ } finally { inflight = null; }
+    })();
   }
+  if (!yata && inflight) await inflight; // nothing cached yet: this first fetch has to finish
   return yata;
 }
 
