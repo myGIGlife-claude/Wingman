@@ -147,6 +147,12 @@ object Tiles {
             val sub = parts.joinToString(" · ")
             if (at != null && at > now) Tile("XANAX COOLDOWN", timerTo = at, sub = sub, color = STOP) else Tile("XANAX", "READY", sub = sub, color = GO)
         }
+        "targets" -> {
+            val t = f.optJSONObject("targets")
+            if (t == null) Tile("TARGETS", "—", sub = "turn targets on in settings", color = DIM)
+            else if (t.has("error") && !t.isNull("error")) Tile("TARGETS", "!", sub = t.optString("error"), color = STOP)
+            else Tile("TARGETS", t.optInt("total").toString(), sub = "match your filters", color = if (t.optInt("total") > 0) GO else DIM)
+        }
         "next" -> Tile("NEXT", if (f.optBoolean("ocNow")) "HOLD" else f.s("next")?.uppercase() ?: "WAIT", color = if (f.optBoolean("ocNow")) STOP else AMBER)
         "cash" -> Tile("CASH", f.l("cash")?.let { money(it) } ?: "—", color = PAPER)
         "drug", "booster", "medical" -> {

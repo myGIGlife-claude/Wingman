@@ -22,11 +22,15 @@ class SingleActivity : Activity() {
         setResult(RESULT_CANCELED)
         wid = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         val custom = try { JSONArray(Prefs.get(this, "custom")) } catch (e: Exception) { JSONArray() }
+        // Same sections as the Dashboard builder. Anything the app can show is on this list.
         val items = listOf(
-            "LIVE" to listOf(Item("location", "Location and ETA", "in Torn, abroad or flying, with landing time"), Item("oc", "OC countdown", "colored by how long you have"), Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("addiction", "Addiction watch", "penalty and rehabs"),
-                Item("energy", "Energy", "number and bar"), Item("nerve", "Nerve", "number and bar"), Item("life", "Health", "number and bar"),
-                Item("hospital", "Hospital status", "countdown if you are in"), Item("jail", "Jail status", "countdown if you are in"),
-                Item("booster", "Booster cooldown", ""), Item("medical", "Medical cooldown", ""), Item("cash", "Cash", ""), Item("next", "Next step", "Xanax, gym, crimes or fly")),
+            "TRAVEL" to listOf(Item("location", "Location and ETA", "in Torn, abroad or flying, with landing time"), Item("trip", "Trip", "landing time, leave by, or fly within"),
+                Item("stock", "Stock of your item", "quantity and price at your destination"), Item("buymax", "Buy max", "how many you can buy now")),
+            "BARS" to listOf(Item("energy", "Energy", "number and bar"), Item("nerve", "Nerve", "number and bar"), Item("life", "Health", "number and bar")),
+            "COOLDOWNS" to listOf(Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("drug", "Drug cooldown", ""), Item("booster", "Booster cooldown", ""),
+                Item("medical", "Medical cooldown", ""), Item("addiction", "Addiction watch", "penalty and rehabs")),
+            "OC AND STATUS" to listOf(Item("oc", "OC countdown", "colored by how long you have"), Item("hospital", "Hospital status", "countdown if you are in"), Item("jail", "Jail status", "countdown if you are in"),
+                Item("cash", "Cash", ""), Item("next", "Next step", "Xanax, gym, crimes or fly"), Item("targets", "Targets", "how many players match your filters")),
             "BUTTONS" to listOf(Item("gym", "Gym", "opens the gym"), Item("fly", "Fly", "locks near your OC"), Item("crimes", "Crimes", "opens crimes"), Item("items", "Items", "opens your items"),
                 Item("spin", "Spin the wheel", "opens the casino wheel"))
                 + (1..4).mapNotNull { n -> custom.optJSONObject(n - 1)?.takeIf { it.optString("path").startsWith("/") }?.let { Item("c$n", "Shortcut: ${it.optString("name")}", it.optString("path")) } },
