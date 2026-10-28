@@ -482,15 +482,12 @@ class WingmanWidget : AppWidgetProvider() {
             val width = AppWidgetManager.getInstance(c).getAppWidgetOptions(wid).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
             if (width in 1..139) {
                 val v = RemoteViews(c.packageName, R.layout.w_actions_v)
+                v.removeAllViews(R.id.av_list) // redraws reuse the old view, so clear it or the buttons pile up
                 buttonViews(c, f, now, ids, true).forEach { v.addView(R.id.av_list, it) }
-                v.addView(R.id.av_list, RemoteViews(c.packageName, R.layout.s_qbtn_v).also {
-                    it.setImageViewResource(R.id.q_icon, icon("refresh", "dim")); it.setTextViewText(R.id.q_label, ""); it.setInt(R.id.qb, "setBackgroundResource", R.drawable.btn_ghost)
-                    it.setOnClickPendingIntent(R.id.qb, broadcast(c, ActionReceiver.ACTION_REFRESH, 0)) })
                 return v
             }
             val v = RemoteViews(c.packageName, R.layout.widget); v.removeAllViews(R.id.content)
-            val refresh = RemoteViews(c.packageName, R.layout.s_sq).also { it.setImageViewResource(R.id.sq_icon, icon("refresh", "dim")); it.setOnClickPendingIntent(R.id.sq, broadcast(c, ActionReceiver.ACTION_REFRESH, 0)) }
-            buttonViews(c, f, now, ids, false).chunked(4).forEachIndexed { i, r -> v.addView(R.id.content, row(c, 8, if (i == 0) r + refresh else r)) }
+            buttonViews(c, f, now, ids, false).chunked(4).forEach { r -> v.addView(R.id.content, row(c, 8, r)) }
             return v
         }
 
