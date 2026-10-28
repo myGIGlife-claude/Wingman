@@ -14,4 +14,6 @@
     <string name="desc_targets">Offline players from your target list you can beat, with hospital release times</string>
     <string name="label_dash">Wingman · Dashboard</string>
     <string name="desc_dash">Your own mix: OC countdown, bars, Xanax, hospital and shortcut buttons</string>
+    <string name="label_single">Wingman · Single</string>
+    <string name="desc_single">One thing per widget: pick OC, energy, Xanax, a bar or a shortcut when you add it</string>
 </resources>

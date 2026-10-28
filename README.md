@@ -182,7 +182,7 @@ curl -s -X POST -H "X-Tick-Key: $TICK" "$URL/tick"; echo
 8. In **Tools**, tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
 
 ### 12. Add the widgets
-Long-press your home screen, tap **Widgets** and find **Wingman**. There are eight, so use only the ones you want:
+Long-press your home screen, tap **Widgets** and find **Wingman**. There are nine, so use only the ones you want:
 
 | Widget | Shows | Good size |
 |---|---|---|
@@ -193,6 +193,7 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are eig
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
 | **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges, plus your energy and hospital status on top | 3×5 |
+| **Wingman · Single** | One thing per widget, chosen when you add it: OC countdown, Xanax, addiction, energy, nerve, health, hospital, jail, cooldowns, cash, or a shortcut button (Gym, Fly, Crimes, Items, Spin the wheel, your own). Add as many as you like | 2×2 and up |
 | **Wingman · Dashboard** | Build your own: OC countdown, bars, Xanax cooldown, addiction watch, hospital and shortcut buttons (Gym, Fly, Crimes, Items, Spin the wheel, your own Torn pages) | 3×4 |
 
 **Foldable phones:** the focused widgets can be as narrow as three columns, so on a Fold's inner screen you can put the Dashboard on one side and the Targets list on the other.

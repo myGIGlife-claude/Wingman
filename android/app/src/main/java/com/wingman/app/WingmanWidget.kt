@@ -22,7 +22,7 @@ class WingmanWidget : AppWidgetProvider() {
     companion object {
         // Every widget type with the part of the model it draws.
         private val KINDS = listOf(WingmanWidget::class.java to "all", StatusWidget::class.java to "status", OcWidget::class.java to "oc",
-            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions", TargetsWidget::class.java to "targets", DashWidget::class.java to "dash")
+            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions", TargetsWidget::class.java to "targets", DashWidget::class.java to "dash", SingleWidget::class.java to "single")
 
         fun updateAll(c: Context) {
             val m = AppWidgetManager.getInstance(c)
@@ -218,6 +218,7 @@ class WingmanWidget : AppWidgetProvider() {
         // Shows when the data last changed, so a refresh tap visibly does something.
         fun build(c: Context, kind: String = "all", id: Int = 0): RemoteViews {
             if (kind == "targets") return buildTargets(c, id)
+            if (kind == "single") return buildSingle(c, id)
             val v = buildBody(c, kind)
             val at = Prefs.get(c, "model_at").toLongOrNull()
             if (at != null && kind != "actions" && kind != "stock") v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
@@ -364,6 +365,67 @@ class WingmanWidget : AppWidgetProvider() {
             v.setOnClickFillInIntent(R.id.tg_row, Intent().putExtra("url", "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}"))
             return v
         }
+
+        // One item per widget, chosen when you add it. It fills the whole widget with large text.
+        private fun buildSingle(c: Context, wid: Int): RemoteViews {
+            val v = RemoteViews(c.packageName, R.layout.w_single)
+            val item = Prefs.get(c, "single_$wid")
+            val m = Model.parse(Prefs.get(c, "model")); val f = m?.facts; val now = System.currentTimeMillis() / 1000
+            val pick = PendingIntent.getActivity(c, 800 + wid, Intent(c, SingleActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, wid), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val refresh = broadcast(c, ActionReceiver.ACTION_REFRESH, 0)
+            fun text(label: String, value: String, sub: String, color: Int, tap: PendingIntent) {
+                v.setTextViewText(R.id.ss_label, label); v.setTextViewText(R.id.ss_value, value); v.setTextColor(R.id.ss_value, color); v.setTextViewText(R.id.ss_sub, sub); v.setOnClickPendingIntent(R.id.ss_root, tap)
+            }
+            if (item.isEmpty()) { text("WINGMAN", "TAP", "to choose what this widget shows", AMBER, pick); return v }
+            if (f == null) { text(item.uppercase(), "…", "waiting for data. Tap to refresh.", DIM, refresh); return v }
+            // Shortcut buttons: the whole widget is the button.
+            val custom = try { org.json.JSONArray(Prefs.get(c, "custom")) } catch (e: Exception) { org.json.JSONArray() }
+            val shortcut: Triple<String, String, String>? = when (item) {   // label, icon, path
+                "gym" -> Triple("GYM", "zap", "/gym.php"); "fly" -> Triple("FLY", "fly", "/travelagency.php"); "crimes" -> Triple("CRIMES", "target", "/loader.php?sid=crimes")
+                "items" -> Triple("ITEMS", "box", "/item.php"); "spin" -> Triple("SPIN THE WHEEL", "spin", "/page.php?sid=spinTheWheel")
+                "c1", "c2", "c3", "c4" -> custom.optJSONObject(item.removePrefix("c").toInt() - 1)?.takeIf { it.optString("path").startsWith("/") }
+                    ?.let { Triple(it.optString("name").ifEmpty { "LINK" }.uppercase().take(14), "link", it.optString("path")) }
+                else -> null
+            }
+            if (shortcut != null) {
+                val locked = item == "fly" && Tiles.flyBlocked(f, now)
+                v.setViewVisibility(R.id.ss_value, View.GONE); v.setViewVisibility(R.id.ss_icon, View.VISIBLE)
+                v.setImageViewResource(R.id.ss_icon, if (locked) icon("lock", "dim") else icon(shortcut.second, "ink"))
+                v.setInt(R.id.ss_root, "setBackgroundResource", if (locked) R.drawable.widget_bg else R.drawable.btn_amber_big)
+                v.setTextViewText(R.id.ss_label, if (locked) "FLY LOCKED" else shortcut.first); v.setTextColor(R.id.ss_label, if (locked) DIM else Color_INK)
+                v.setTextViewTextSize(R.id.ss_label, android.util.TypedValue.COMPLEX_UNIT_SP, 15f)
+                v.setTextViewText(R.id.ss_sub, if (locked) "too close to your OC" else "")
+                v.setOnClickPendingIntent(R.id.ss_root, Notifier.openIntent(c, "https://www.torn.com${shortcut.third}", 900 + wid, if (item == "fly") f.optLong("flyOkUntil", 0) else 0))
+                return v
+            }
+            // Bars: big number with a bar underneath.
+            if (item in listOf("energy", "nerve", "life")) {
+                val b = f.optJSONObject(item); if (b == null) { text(item.uppercase(), "—", "no data", DIM, refresh); return v }
+                val cur = b.getInt("cur"); val max = b.getInt("max"); val pct = (cur * 100 / max).coerceIn(0, 100)
+                val k = when (item) { "life" -> if (pct > 70) "go" else if (pct > 35) "yellow" else "stop"; "energy" -> "amber"; else -> "yellow" }
+                val at = if (b.has("fullAt") && !b.isNull("fullAt")) b.getLong("fullAt") else 0L
+                text(item.uppercase(), "$cur/$max", if (cur >= max) "FULL" else if (at > now) "full at ${Tiles.clock(at)}" else "", rgb(k), refresh)
+                v.setViewVisibility(R.id.ss_bars, View.VISIBLE)
+                listOf("go", "amber", "yellow", "stop").forEach { kk -> v.setViewVisibility(resBar(kk), if (kk == k) View.VISIBLE else View.GONE) }
+                v.setProgressBar(resBar(k), 100, pct, false)
+                return v
+            }
+            // Status and everything else is a tile: a live timer or a value.
+            val tile: Tile? = when (item) {
+                "hospital" -> f.optLong("hospitalUntil", 0).let { u -> if (u > now) Tile("HOSPITAL", timerTo = u, sub = "until released", color = STOP) else Tile("HOSPITAL", "OK", sub = "not in hospital", color = GO) }
+                "jail" -> f.optLong("jailUntil", 0).let { u -> if (u > now) Tile("JAIL", timerTo = u, sub = "until released", color = STOP) else Tile("JAIL", "FREE", sub = "not in jail", color = GO) }
+                else -> Tiles.build(item, f, now)
+            }
+            if (tile == null) { text(item.uppercase(), "—", "nothing to show", DIM, refresh); return v }
+            text(tile.label, tile.text, tile.sub, tile.color, refresh)
+            if (tile.timerTo != null && tile.timerTo > now) {
+                v.setViewVisibility(R.id.ss_value, View.GONE); v.setViewVisibility(R.id.ss_timer, View.VISIBLE)
+                v.setTextColor(R.id.ss_timer, tile.color); countdown(v, R.id.ss_timer, tile.timerTo - now)
+            } else if (tile.timerTo != null) v.setTextViewText(R.id.ss_value, "NOW")
+            return v
+        }
+
+        private fun resBar(k: String) = when (k) { "go" -> R.id.ss_b_go; "amber" -> R.id.ss_b_amber; "yellow" -> R.id.ss_b_yellow; else -> R.id.ss_b_stop }
 
         // The scrollable attack list widget.
         private fun buildTargets(c: Context, id: Int): RemoteViews {
