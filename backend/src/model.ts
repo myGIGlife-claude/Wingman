@@ -13,6 +13,9 @@ export interface Widget {
 }
 
 // Raw numbers for the widget tiles. All times are epoch seconds so the phone can run its own countdowns.
+// Slow-changing numbers fetched every few minutes: addiction penalty and Xanax / overdose counts.
+export interface Extra { at?: number; addiction?: number | null; addictionLabel?: string | null; rehabs?: number | null; xanTaken?: number | null; overdoses?: number | null }
+
 export interface Facts {
   phase: string; origin: string | null; name: string | null; faction: string | null; life: Bar | null; hospitalUntil: number | null; jailUntil: number | null;
   flyOkUntil: number | null; flyBufferSecs: number; ocName: string | null; ocStatus: string | null; ocReadyAt: number | null; ocNow: boolean;
@@ -22,6 +25,7 @@ export interface Facts {
   restock: { eta: number | null; overdue: boolean; everySecs: number | null; samples: number; soldOutAt: number | null } | null;
   targets: TargetsView | null;
   targetsHash: string;
+  drugs: { addiction: number | null; addictionLabel: string | null; rehabs: number | null; xanTaken: number | null; overdoses: number | null } | null;
   buyMax: number | null; buyWhy: string | null; next: string | null; bought: boolean; fits: boolean | null;
 }
 interface Bar { cur: number; max: number; fullAt: number | null }
@@ -39,7 +43,7 @@ export function buyLabel(p: any): string {
   return b?.why === 'cash' ? 'NOT ENOUGH CASH' : `BUY MAX (${b?.n ?? 0})`;
 }
 
-export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, origin?: string | null, targets?: TargetsView): Facts {
+export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, origin?: string | null, targets?: TargetsView, extra?: Extra): Facts {
   const t: number = p.t;
   const bar = (b: any): Bar | null => b && b.maximum ? { cur: b.current, max: b.maximum, fullAt: b.fulltime ? t + b.fulltime : null } : null;
   const cd = (s: unknown) => (typeof s === 'number' && s > 0 ? t + s : null);
@@ -58,14 +62,14 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, 
     landAt: p.landAt ?? null, departedAt: typeof user?.travel?.departed === 'number' && user.travel.departed > 0 ? user.travel.departed : null, outbound: p.phase === 'traveling' ? !!p.outbound : null, where: abroad ? p.here?.name ?? null : p.where ?? null,
     leaveBy: p.leaveBy ?? null, flyBy: p.flyBy ?? null, flySecs: abroad ? p.flyBack : p.fly, target: p.target.name, item: cfg.item,
     stock: p.stock ? { qty: p.stock.qty, cost: p.stock.cost, seen: p.stock.update ?? null } : null,
-    targets: targets ?? null, targetsHash: targetsHash(targets),
+    targets: targets ?? null, targetsHash: targetsHash(targets), drugs: extra ? { addiction: extra.addiction ?? null, addictionLabel: extra.addictionLabel ?? null, rehabs: extra.rehabs ?? null, xanTaken: extra.xanTaken ?? null, overdoses: extra.overdoses ?? null } : null,
     restock: rs ? { eta: rs.eta, overdue: rs.overdue, everySecs: rs.every, samples: rs.samples, soldOutAt: rs.soldOutAt } : null,
     buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
     next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,
   };
 }
 
-export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any, rs?: Eta, origin?: string | null, targets?: TargetsView): Widget {
+export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, user?: any, rs?: Eta, origin?: string | null, targets?: TargetsView, extra?: Extra): Widget {
   const t: number = p.t, tz = cfg.tz;
   const w: Widget = { phase: p.phase, title: '', countdownTo: null, countdownLabel: '', sub: '', primary: { label: 'WAITING', url: null, style: 'ghost' }, showBought: false, updatedAt: t };
 
@@ -102,6 +106,6 @@ export function widgetModel(p: any, cfg: Cfg & { tz: string }, bought: boolean, 
       if (soonest) { w.countdownTo = soonest.at; w.countdownLabel = soonest.id.toUpperCase(); }
     }
   }
-  w.facts = factsOf(p, cfg, user, bought, rs, origin, targets);
+  w.facts = factsOf(p, cfg, user, bought, rs, origin, targets, extra);
   return w;
 }

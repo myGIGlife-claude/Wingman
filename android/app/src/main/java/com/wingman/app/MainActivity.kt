@@ -40,6 +40,7 @@ class MainActivity : Activity() {
         AlertDef("oc_ready", "OC ready", "Stay in Torn, your OC is ready", "YOUR STATUS"),
         AlertDef("hospital_out", "Out of hospital", "You were released", "YOUR STATUS"),
         AlertDef("jail_out", "Out of jail", "You were released", "YOUR STATUS"),
+        AlertDef("addiction_up", "Addiction increased", "Your drug addiction penalty went up", "YOUR STATUS"),
         AlertDef("life_full", "Health full", "Your life bar is full", "YOUR STATUS", false),
         AlertDef("step_ready", "Xanax, gym or crimes ready", "Your next home step is ready", "BARS AND COOLDOWNS"),
         AlertDef("energy_full", "Energy full", "Your energy bar is full", "BARS AND COOLDOWNS", false),
@@ -169,7 +170,8 @@ class MainActivity : Activity() {
             addView(button("Save settings", true) { save() })
         }
         section(col, "WIDGET", { "Choose what the widget shows" }, false) {
-            addView(button("Widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
+            addView(button("All-in-one widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
+            addView(button("Dashboard widget builder", false) { startActivity(Intent(this@MainActivity, DashActivity::class.java)) })
         }
         section(col, "TOOLS", { "Tests and battery" }, false) {
             addView(button("Test notification (this phone)", false) { localTest() })

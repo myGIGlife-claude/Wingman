@@ -22,7 +22,7 @@ class WingmanWidget : AppWidgetProvider() {
     companion object {
         // Every widget type with the part of the model it draws.
         private val KINDS = listOf(WingmanWidget::class.java to "all", StatusWidget::class.java to "status", OcWidget::class.java to "oc",
-            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions", TargetsWidget::class.java to "targets")
+            TripWidget::class.java to "trip", StockWidget::class.java to "stock", ActionsWidget::class.java to "actions", TargetsWidget::class.java to "targets", DashWidget::class.java to "dash")
 
         fun updateAll(c: Context) {
             val m = AppWidgetManager.getInstance(c)
@@ -188,7 +188,7 @@ class WingmanWidget : AppWidgetProvider() {
         private fun icon(k: String, tint: String) = when ("$k:$tint") {
             "fly:ink" -> R.drawable.i_fly_ink; "fly:dim" -> R.drawable.i_fly_dim; "zap:ink" -> R.drawable.i_zap_ink; "target:ink" -> R.drawable.i_target_ink
             "box:ink" -> R.drawable.i_box_ink; "lock:dim" -> R.drawable.i_lock_dim; "cart:ink" -> R.drawable.i_cart_ink
-            "check:go" -> R.drawable.i_check_go; "refresh:dim" -> R.drawable.i_refresh_dim; else -> R.drawable.i_fly_ink
+            "check:go" -> R.drawable.i_check_go; "spin:ink" -> R.drawable.i_spin_ink; "link:ink" -> R.drawable.i_link_ink; "refresh:dim" -> R.drawable.i_refresh_dim; else -> R.drawable.i_fly_ink
         }
 
         private fun qbtn(c: Context, label: String, ic: String, locked: Boolean, tap: PendingIntent): RemoteViews {
@@ -248,6 +248,7 @@ class WingmanWidget : AppWidgetProvider() {
                 statusSections(c, m, f, listOf("life", "energy", "nerve", "jail", "hospital"), now, refresh, add)
                 return v
             }
+            if (kind == "dash") { dashSections(c, f, now, refresh, add); return v }
             if (kind == "oc") { add(panel(c, homeOc(f, now), now)); return v }
             if (kind == "stock") { add(stockCard(c, f, now)); return v }
             if (kind == "actions") { quickButtons(c, f, now, refresh, add); return v }
@@ -378,6 +379,17 @@ class WingmanWidget : AppWidgetProvider() {
             val d = targetsData(c)
             val total = d?.optInt("total") ?: 0
             val err = d?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }
+            // Your energy and hospital status stay visible above the list.
+            val f = Model.parse(Prefs.get(c, "model"))?.facts; val now = System.currentTimeMillis() / 1000
+            f?.optJSONObject("energy")?.let { e ->
+                val cur = e.getInt("cur"); val max = e.getInt("max")
+                v.setTextViewText(R.id.tgt_en_value, "$cur/$max${if (cur >= max) " FULL" else ""}"); v.setProgressBar(R.id.tgt_en_bar, 100, (cur * 100 / max).coerceIn(0, 100), false)
+            }
+            val hu = f?.optLong("hospitalUntil", 0) ?: 0
+            if (hu > now) {
+                v.setInt(R.id.tgt_hosp_box, "setBackgroundResource", R.drawable.chip_stop); v.setTextViewText(R.id.tgt_hosp, "● HOSPITAL"); v.setTextColor(R.id.tgt_hosp, STOP)
+                v.setViewVisibility(R.id.tgt_hosp_t, View.VISIBLE); countdown(v, R.id.tgt_hosp_t, hu - now)
+            } else { v.setInt(R.id.tgt_hosp_box, "setBackgroundResource", R.drawable.chip_go); v.setTextViewText(R.id.tgt_hosp, "● HOSPITAL · OK"); v.setTextColor(R.id.tgt_hosp, GO) }
             v.setTextViewText(R.id.tgt_label, "ATTACK LIST")
             v.setTextViewText(R.id.tgt_count, if (d == null) "No data yet" else "$total can be hit")
             v.setTextViewText(R.id.tgt_chip, if (d?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE")
@@ -386,10 +398,45 @@ class WingmanWidget : AppWidgetProvider() {
             v.setEmptyView(R.id.tgt_list, R.id.tgt_empty)
             v.setTextViewText(R.id.tgt_empty, err ?: if (d == null) "Waiting for the backend. Tap ⟳." else "No matches. Loosen the filters in Wingman → Targets.")
             v.setTextColor(R.id.tgt_empty, if (err != null) STOP else DIM)
-            v.setOnClickPendingIntent(R.id.tgt_open, Notifier.openIntent(c, "https://www.torn.com/page.php?sid=list&type=targets", 45))
             v.setOnClickPendingIntent(R.id.tgt_refresh, broadcast(c, ActionReceiver.ACTION_REFRESH, 0))
             Prefs.get(c, "model_at").toLongOrNull()?.let { v.setTextViewText(R.id.tgt_updated, "UPDATED ${Tiles.clock(it)}") }
             return v
+        }
+
+        // The customizable Dashboard: live tiles first, then shortcut buttons, both in the order you chose.
+        private fun dashSections(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
+            val ids = Tiles.dash(Prefs.get(c, "dash").ifEmpty { Tiles.DASH_DEFAULT })
+            val bars = ids.filter { it in listOf("life", "energy", "nerve") }.mapNotNull { id ->
+                val b = f.optJSONObject(id) ?: return@mapNotNull null
+                val cur = b.getInt("cur"); val max = b.getInt("max"); val pct = (cur * 100 / max).coerceAtMost(100)
+                when (id) {
+                    "life" -> stat(c, "HEALTH", "%,d/%,d".format(cur, max), pct, if (pct > 70) "go" else if (pct > 35) "yellow" else "stop")
+                    "energy" -> stat(c, "ENERGY", "$cur/$max${if (cur >= max) " FULL" else ""}", pct, "amber")
+                    else -> stat(c, "NERVE", "$cur/$max${if (cur >= max) " FULL" else ""}", pct, "yellow")
+                }
+            }
+            val chips = mutableListOf<RemoteViews>()
+            if ("hospital" in ids) { val u = f.optLong("hospitalUntil", 0); chips.add(if (u > now) chip(c, "HOSPITAL", "stop", u, now) else chip(c, "HOSPITAL · OK", "go", null, now)) }
+            if ("jail" in ids) { val u = f.optLong("jailUntil", 0); chips.add(if (u > now) chip(c, "JAIL", "stop", u, now) else chip(c, "JAIL · FREE", "go", null, now)) }
+            if (chips.isNotEmpty()) add(row(c, 8, chips))
+            // The OC countdown gets a full-width card; other tiles pair up.
+            if ("oc" in ids) Tiles.build("oc", f, now)?.let { add(row(c, 8, listOf(tileView(c, it, now)))) }
+            bars.chunked(2).forEach { add(row(c, 12, it)) }
+            ids.filter { it in listOf("xanax", "addiction", "booster", "medical", "cash") }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
+            val custom = try { org.json.JSONArray(Prefs.get(c, "custom")) } catch (e: Exception) { org.json.JSONArray() }
+            val btns = ids.filter { id -> Tiles.DASH.first { it.id == id }.button }.mapIndexedNotNull { i, id ->
+                val tap = { path: String, before: Long -> Notifier.openIntent(c, "https://www.torn.com$path", 70 + i, before) }
+                when (id) {
+                    "fly" -> { val locked = Tiles.flyBlocked(f, now); qbtn(c, "FLY", "fly", locked, tap("/travelagency.php", f.optLong("flyOkUntil", 0))) }
+                    "gym" -> qbtn(c, "GYM", "zap", false, tap("/gym.php", 0)); "crimes" -> qbtn(c, "CRIMES", "target", false, tap("/loader.php?sid=crimes", 0))
+                    "items" -> qbtn(c, "ITEMS", "box", false, tap("/item.php", 0)); "spin" -> qbtn(c, "SPIN", "spin", false, tap("/page.php?sid=spinTheWheel", 0))
+                    else -> custom.optJSONObject(id.removePrefix("c").toInt() - 1)?.let { o ->
+                        val path = o.optString("path"); if (!path.startsWith("/")) null else qbtn(c, o.optString("name").ifEmpty { "LINK" }.uppercase().take(8), "link", false, tap(path, 0))
+                    }
+                }
+            }
+            btns.chunked(3).forEachIndexed { i, r -> add(row(c, 8, if (i == btns.chunked(3).lastIndex) r + refresh else r)) }
+            if (btns.isEmpty()) add(row(c, 8, listOf(refresh)))
         }
 
         private fun quickButtons(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {

@@ -12,4 +12,6 @@
     <string name="desc_actions">Fly, Gym, Crimes and Items buttons</string>
     <string name="label_targets">Wingman · Targets</string>
     <string name="desc_targets">Offline players from your target list you can beat, with hospital release times</string>
+    <string name="label_dash">Wingman · Dashboard</string>
+    <string name="desc_dash">Your own mix: OC countdown, bars, Xanax, hospital and shortcut buttons</string>
 </resources>

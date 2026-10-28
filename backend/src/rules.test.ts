@@ -86,3 +86,24 @@ test('push model drops the target list but keeps a fingerprint that changes with
   const a = targetsHash({ matches: [{ id: 1, until: null }] }), b = targetsHash({ matches: [{ id: 1, until: 99 }] });
   assert.notEqual(a, b); assert.equal(targetsHash(null), '');
 });
+
+import { addictionFrom, drugCounts } from './torn.ts';
+test('addiction penalty and drug counts are read from the API shapes', () => {
+  const bs = { battlestats: { strength: { value: 1, modifiers: [{ type: 'Merits', value: 12 }, { type: 'Addiction', value: -2 }] }, defense: { modifiers: [] } } };
+  assert.equal(addictionFrom(bs), -2);
+  assert.equal(addictionFrom({ battlestats: { strength: { modifiers: [] } } }), 0); // readable, no penalty
+  assert.equal(addictionFrom({}), null);                                            // unreadable: unknown
+  assert.deepEqual(drugCounts({ personalstats: { drugs: { xanax: 378, overdoses: 4 } } }), { xanTaken: 378, overdoses: 4 });
+  assert.deepEqual(drugCounts({}), { xanTaken: null, overdoses: null });
+});
+
+import { addictionIcon, rehabCount } from './torn.ts';
+test('the addiction brain icon gives the level name and penalty', () => {
+  const icons = [{ title: 'Drug Cooldown', description: 'Under the influence of Xanax' }, { title: 'Minor Drug Addiction', description: 'Your battle stats in combat are slightly reduced (-2%)' }];
+  assert.deepEqual(addictionIcon({ icons }), { label: 'Minor Drug Addiction', pct: -2 });
+  assert.equal(addictionIcon({ icons: [{ title: 'Job', description: 'x' }] }), null);
+  assert.equal(addictionIcon({}), null);
+  assert.equal(rehabCount({ personalstats: { drugs: { rehabilitations: 3 } } }), 3);
+  assert.equal(rehabCount({ personalstats: { drugs: { rehabilitations: { amount: 5 } } } }), 5);
+  assert.equal(rehabCount({}), null);
+});

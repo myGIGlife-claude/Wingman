@@ -182,7 +182,7 @@ curl -s -X POST -H "X-Tick-Key: $TICK" "$URL/tick"; echo
 8. In **Tools**, tap **Battery: set Unrestricted** and set Wingman to **Unrestricted**. On Samsung, also add it to **Never sleeping apps**. Otherwise Android may stop background updates.
 
 ### 12. Add the widgets
-Long-press your home screen, tap **Widgets** and find **Wingman**. There are seven, so use only the ones you want:
+Long-press your home screen, tap **Widgets** and find **Wingman**. There are eight, so use only the ones you want:
 
 | Widget | Shows | Good size |
 |---|---|---|
@@ -192,9 +192,12 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are sev
 | **Wingman · Trip** | Landing, leave-by and OC timers, the next trip, and the Fly or Buy button | 4×4 |
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
-| **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges and hospital release timers | 4×5 |
+| **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges and hospital release timers, plus your energy and hospital status on top | 3×5 |
+| **Wingman · Dashboard** | Build your own: OC countdown, bars, Xanax cooldown, addiction watch, hospital and shortcut buttons (Gym, Fly, Crimes, Items, Spin the wheel, your own Torn pages) | 3×4 |
 
-The all-in-one widget opens a layout editor when you add it (reopen it any time from the app's **Widget layout** button).
+**Foldable phones:** the focused widgets can be as narrow as three columns, so on a Fold's inner screen you can put the Dashboard on one side and the Targets list on the other.
+
+The all-in-one and Dashboard widgets open an editor when you add them (reopen it any time from the app's **Widget layout** button).
 
 ### 13. Optional: the Torn PDA userscript
 In Torn PDA, add `userscript/wingman.user.js` as a user script. It pre-fills the quantity box on the foreign shop. It never presses Buy. In its ⚙ panel you can enter your service URL and app secret to keep settings in sync with the app.

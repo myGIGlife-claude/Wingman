@@ -37,3 +37,35 @@ export async function fetchTargets(key: string): Promise<any[]> {
 export async function fetchProfile(key: string, id: number): Promise<any> {
   return get(`https://api.torn.com/user/${id}?selections=profile&key=${key}&comment=Wingman`);
 }
+
+// Your stat modifiers. The "Addiction" one is the penalty (for example -2) your drug use costs you.
+export const fetchBattleStats = (key: string) => get(`https://api.torn.com/v2/user/battlestats?key=${key}&comment=Wingman`);
+export const fetchDrugStats = (key: string) => get(`https://api.torn.com/v2/user/personalstats?cat=drugs&key=${key}&comment=Wingman`);
+
+// Pure parsers so they can be tested.
+export function addictionFrom(bs: any): number | null {
+  for (const stat of ['strength', 'defense', 'speed', 'dexterity']) {
+    const m = (bs?.battlestats?.[stat]?.modifiers ?? []).find((x: any) => x?.type === 'Addiction');
+    if (m && typeof m.value === 'number') return m.value;
+  }
+  return bs?.battlestats ? 0 : null; // stats were readable but no addiction modifier: no penalty
+}
+export const drugCounts = (j: any) => ({ xanTaken: j?.personalstats?.drugs?.xanax ?? null, overdoses: j?.personalstats?.drugs?.overdoses ?? null });
+
+export const fetchIcons = (key: string) => get(`https://api.torn.com/v2/user/icons?key=${key}&comment=Wingman`);
+
+// The brain icon: e.g. "Minor Drug Addiction", "Your battle stats in combat are slightly reduced (-2%)".
+export function addictionIcon(j: any): { label: string; pct: number } | null {
+  const list = Array.isArray(j?.icons) ? j.icons : Object.values(j?.icons ?? {});
+  for (const ic of list as any[]) {
+    const title = String(ic?.title ?? '');
+    if (!/addict/i.test(title)) continue;
+    const m = String(ic?.description ?? '').match(/(-?\d+(?:\.\d+)?)\s*%/);
+    return { label: title.replace(/<[^>]+>/g, '').trim(), pct: m ? -Math.abs(Number(m[1])) : 0 };
+  }
+  return null;
+}
+export function rehabCount(j: any): number | null {
+  const r = j?.personalstats?.drugs?.rehabilitations; // a number, or an object with an amount
+  return typeof r === 'number' ? r : typeof r?.amount === 'number' ? r.amount : null;
+}

@@ -17,6 +17,9 @@ val YELLOW = 0xFFFFD23F.toInt()
 
 class TileDef(val id: String, val title: String)
 
+// One entry in the customizable Dashboard widget: a live tile or a shortcut button.
+class DashDef(val id: String, val title: String, val button: Boolean)
+
 object Tiles {
     val ALL = listOf(
         TileDef("life", "Health bar"), TileDef("energy", "Energy bar"), TileDef("nerve", "Nerve bar"),
@@ -25,6 +28,17 @@ object Tiles {
         TileDef("buymax", "Buy max"), TileDef("next", "Next step"), TileDef("cash", "Cash"),
         TileDef("drug", "Drug cooldown"), TileDef("booster", "Booster cooldown"), TileDef("medical", "Medical cooldown"),
     )
+    val DASH = listOf(
+        DashDef("oc", "OC countdown", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
+        DashDef("xanax", "Xanax: cooldown, addiction, counts", false), DashDef("addiction", "Addiction watch: penalty and rehabs", false), DashDef("booster", "Booster cooldown", false), DashDef("medical", "Medical cooldown", false),
+        DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
+        DashDef("gym", "Gym button", true), DashDef("fly", "Fly button (locks near your OC)", true), DashDef("crimes", "Crimes button", true),
+        DashDef("items", "Items button", true), DashDef("spin", "Spin the wheel button", true),
+        DashDef("c1", "Custom shortcut 1", true), DashDef("c2", "Custom shortcut 2", true), DashDef("c3", "Custom shortcut 3", true), DashDef("c4", "Custom shortcut 4", true),
+    )
+    const val DASH_DEFAULT = "oc,energy,xanax,hospital,gym,fly,crimes,spin"
+    val SHORTCUT_URL = mapOf("gym" to "/gym.php", "fly" to "/travelagency.php", "crimes" to "/loader.php?sid=crimes", "items" to "/item.php", "spin" to "/page.php?sid=spinTheWheel")
+    fun dash(csv: String): List<String> = csv.split(',').filter { id -> DASH.any { it.id == id } }
     val EXTRA = setOf("trip", "stock", "buymax", "next", "cash", "drug", "booster", "medical")
     const val DEFAULT = "life,energy,jail,hospital,oc"
 
@@ -89,6 +103,32 @@ object Tiles {
             val cash = f.l("cash")?.let { "cash ${money(it)}" } ?: ""
             if (n == null) Tile("BUY MAX", "—", sub = "when abroad", color = DIM)
             else Tile("BUY MAX", n.toString(), sub = if (f.s("buyWhy") == "cash") "not enough cash" else cash, color = if (n > 0) GO else STOP)
+        }
+        "oc" -> {
+            val at = f.l("ocReadyAt"); val name = f.s("ocName") ?: "Not in an OC"
+            if (f.optBoolean("ocNow")) Tile("OC", "READY", sub = name, color = GO)
+            else if (at != null) Tile("OC READY IN", timerTo = at, sub = name, color = ocColor(f, at, now))
+            else Tile("OC", "—", sub = name, color = DIM)
+        }
+        "addiction" -> {
+            val d = f.optJSONObject("drugs")
+            if (d == null || !d.has("addiction") || d.isNull("addiction")) Tile("ADDICTION", "?", sub = "no data yet", color = DIM)
+            else {
+                val pct = d.getInt("addiction")
+                val label = d.optString("addictionLabel").takeIf { it.isNotEmpty() && it != "null" } ?: if (pct == 0) "No addiction penalty" else "Addiction"
+                val rehabs = d.takeIf { it.has("rehabs") && !it.isNull("rehabs") }?.let { " · ${it.getInt("rehabs")} rehabs" } ?: ""
+                // Torn can kick you from education at roughly a 6-7% penalty, so red starts well before that.
+                Tile("ADDICTION", if (pct == 0) "NONE" else "$pct%", sub = label + rehabs, color = if (pct == 0) GO else if (pct > -4) YELLOW else STOP)
+            }
+        }
+        "xanax" -> {
+            val at = f.optJSONObject("cooldowns")?.l("drug"); val d = f.optJSONObject("drugs")
+            val parts = listOfNotNull(
+                d?.takeIf { it.has("addiction") && !it.isNull("addiction") }?.let { "addiction ${it.getInt("addiction")}%" },
+                d?.takeIf { it.has("xanTaken") && !it.isNull("xanTaken") }?.let { "${it.getInt("xanTaken")} taken" },
+                d?.takeIf { it.has("overdoses") && !it.isNull("overdoses") }?.let { "${it.getInt("overdoses")} OD" })
+            val sub = parts.joinToString(" · ")
+            if (at != null && at > now) Tile("XANAX COOLDOWN", timerTo = at, sub = sub, color = STOP) else Tile("XANAX", "READY", sub = sub, color = GO)
         }
         "next" -> Tile("NEXT", if (f.optBoolean("ocNow")) "HOLD" else f.s("next")?.uppercase() ?: "WAIT", color = if (f.optBoolean("ocNow")) STOP else AMBER)
         "cash" -> Tile("CASH", f.l("cash")?.let { money(it) } ?: "—", color = PAPER)

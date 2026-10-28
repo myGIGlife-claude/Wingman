@@ -1,5 +1,5 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchUser, fetchOC, fetchTargets, fetchProfile, isKeyProblem, isRateLimit } from './torn.ts';
+import { fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
 import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
 import { fetchYata, findStock } from './yata.ts';
@@ -12,6 +12,16 @@ import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { observe, estimate } from './restock.ts';
 
 const SENT_TTL = 3 * 86400;
+
+// Addiction penalty and Xanax / overdose counts change slowly, so refresh them every 10 minutes (2 API calls).
+async function refreshExtra(key: string, st: any, t: number) {
+  if (st.extra && t - st.extra.at < 600 && 'rehabs' in st.extra) return; // a stored copy without the newer fields refreshes at once
+  try {
+    const [bs, ds, ic] = await Promise.all([fetchBattleStats(key), fetchDrugStats(key), fetchIcons(key)]);
+    const icon = addictionIcon(ic); // the brain icon is what Torn shows; the stat modifier is the fallback
+    st.extra = { at: t, addiction: icon ? icon.pct : addictionFrom(bs), addictionLabel: icon?.label ?? null, rehabs: rehabCount(ds), ...drugCounts(ds) };
+  } catch { st.extra = { ...(st.extra ?? {}), at: t }; } // keep the old numbers and retry in 10 minutes
+}
 
 // FF Scouter list, refreshed every 2 minutes: players that fit your difficulty cap, plus their public profile for hospital times.
 async function refreshFF(key: string, ffKey: string, cfg: any, st: any, t: number) {
@@ -84,6 +94,8 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
     try { st.targets = { at: t, list: compact(await fetchTargets(key)) }; } catch { /* keep the cached list */ }
   }
   await refreshFF(key, ffKey, cfg, st, t);
+  const addictionBefore = st.extra?.addiction;
+  await refreshExtra(key, st, t);
   const tg = targetsView(cfg, st, user.level ?? 0, t, ffKey);
 
   let p = plan(user, oc, cfg, st, t);
@@ -115,9 +127,13 @@ export async function tick(key: string, ffKey = ''): Promise<{ ok: boolean; phas
   const flags: Flags = { energy: bar(user.energy), nerve: bar(user.nerve), life: bar(user.life), drug: !(cd.drug > 0), booster: !(cd.booster > 0), medical: !(cd.medical > 0),
     hospital: p.phase === 'hospital' || (user.states?.hospital_timestamp ?? 0) > t, jail: p.phase === 'jail' || (user.states?.jail_timestamp ?? 0) > t };
   // The player's switches decide which alerts go out; a bad-key warning always does.
-  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
+  // Addiction watcher: a more negative penalty than before means your addiction went up.
+  const nowAddiction = st.extra?.addiction;
+  const addictionEvents: Evt[] = typeof addictionBefore === 'number' && typeof nowAddiction === 'number' && nowAddiction < addictionBefore
+    ? [{ key: `addiction:${nowAddiction}`, type: 'addiction_up', text: `Addiction rose to ${nowAddiction}%${st.extra.addictionLabel ? ` (${st.extra.addictionLabel})` : ''}`, url: null }] : [];
+  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg);
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, st.extra);
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(slimForPush(model), events); } catch (e) {
@@ -154,5 +170,5 @@ export async function currentModel(key: string, fresh = false, ffKey = ''): Prom
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(st.hist?.[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
-    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey));
+    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), st.extra);
 }
