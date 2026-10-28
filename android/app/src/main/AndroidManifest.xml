@@ -90,6 +90,10 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
 
+        <activity android:name=".ActionsActivity" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+
         <receiver android:name=".ActionReceiver" android:exported="false" />
 
         <service android:name=".WingmanMessaging" android:exported="false">

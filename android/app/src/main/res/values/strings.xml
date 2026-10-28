@@ -9,7 +9,7 @@
     <string name="label_stock">Wingman · Stock</string>
     <string name="desc_stock">Your item\'s stock, price and restock estimate</string>
     <string name="label_actions">Wingman · Actions</string>
-    <string name="desc_actions">Fly, Gym, Crimes and Items buttons</string>
+    <string name="desc_actions">Choose your own buttons: Fly, Gym, Crimes, Items, Spin the wheel and your shortcuts. Goes one column wide too</string>
     <string name="label_targets">Wingman · Targets</string>
     <string name="desc_targets">Offline players from your target list you can beat, with hospital release times</string>
     <string name="label_dash">Wingman · Dashboard</string>

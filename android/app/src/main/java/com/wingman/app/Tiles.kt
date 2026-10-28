@@ -36,6 +36,7 @@ object Tiles {
         DashDef("items", "Items button", true), DashDef("spin", "Spin the wheel button", true),
         DashDef("c1", "Custom shortcut 1", true), DashDef("c2", "Custom shortcut 2", true), DashDef("c3", "Custom shortcut 3", true), DashDef("c4", "Custom shortcut 4", true),
     )
+    const val ACTIONS_DEFAULT = "fly,gym,crimes,items"
     const val DASH_DEFAULT = "oc,energy,xanax,hospital,gym,fly,crimes,spin"
     val SHORTCUT_URL = mapOf("gym" to "/gym.php", "fly" to "/travelagency.php", "crimes" to "/loader.php?sid=crimes", "items" to "/item.php", "spin" to "/page.php?sid=spinTheWheel")
     fun dash(csv: String): List<String> = csv.split(',').filter { id -> DASH.any { it.id == id } }

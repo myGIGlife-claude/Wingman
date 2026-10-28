@@ -13,7 +13,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 // Build your own Dashboard widget: choose live tiles and shortcut buttons, order them, and add your own Torn page shortcuts.
-class DashActivity : Activity() {
+open class DashActivity : Activity() {
+    // The Actions widget editor reuses this screen with buttons only, saved per widget.
+    protected open val actions = false
+    private val wid get() = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+    private val prefKey get() = if (actions) "actions_$wid" else "dash"
+    private val catalog get() = Tiles.DASH.filter { !actions || it.button }
     private val state = mutableListOf<Pair<DashDef, Boolean>>()
     private val names = Array(4) { "" }; private val paths = Array(4) { "" }
     private lateinit var col: LinearLayout
@@ -22,9 +27,9 @@ class DashActivity : Activity() {
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
         setResult(RESULT_CANCELED)
-        val on = Tiles.dash(Prefs.get(this, "dash").ifEmpty { Tiles.DASH_DEFAULT })
-        on.forEach { id -> state.add(Tiles.DASH.first { it.id == id } to true) }
-        Tiles.DASH.filter { d -> on.none { it == d.id } }.forEach { state.add(it to false) }
+        val on = Tiles.dash(Prefs.get(this, prefKey).ifEmpty { if (actions) Tiles.ACTIONS_DEFAULT else Tiles.DASH_DEFAULT }).filter { id -> catalog.any { it.id == id } }
+        on.forEach { id -> state.add(catalog.first { it.id == id } to true) }
+        catalog.filter { d -> on.none { it == d.id } }.forEach { state.add(it to false) }
         try { JSONArray(Prefs.get(this, "custom")).let { a -> for (i in 0 until minOf(4, a.length())) { names[i] = a.getJSONObject(i).optString("name"); paths[i] = a.getJSONObject(i).optString("path") } } } catch (e: Exception) { /* none yet */ }
         col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(24)) }
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col); Ui.fitSystemBars(this) })
@@ -66,8 +71,8 @@ class DashActivity : Activity() {
 
     private fun draw() {
         col.removeAllViews()
-        col.addView(txt("DASHBOARD WIDGET", AMBER, 24f, true).apply { letterSpacing = 0.1f })
-        col.addView(txt("Pick what appears. Live tiles show first, then the buttons, each in the order below. Tap ON or OFF; use ▲ ▼ to move.", DIM, 13f).apply { setPadding(0, dp(6), 0, 0) })
+        col.addView(txt(if (actions) "ACTION BUTTONS" else "DASHBOARD WIDGET", AMBER, 24f, true).apply { letterSpacing = 0.1f })
+        col.addView(txt(if (actions) "Pick the buttons for this widget and their order. Tap ON or OFF; use ▲ ▼ to move. Make the widget one column wide to stack them vertically." else "Pick what appears. Live tiles show first, then the buttons, each in the order below. Tap ON or OFF; use ▲ ▼ to move.", DIM, 13f).apply { setPadding(0, dp(6), 0, 0) })
         val shown = state.indices.filter { state[it].second }
         col.addView(txt("SHOWN (${shown.size})", DIM, 12f, true).apply { letterSpacing = 0.1f; setPadding(0, dp(20), 0, dp(6)) })
         shown.forEachIndexed { pos, i ->
@@ -96,10 +101,9 @@ class DashActivity : Activity() {
     private fun save() {
         val custom = JSONArray().also { a -> for (i in 0 until 4) a.put(JSONObject().put("name", names[i].trim()).put("path", paths[i].trim().let { if (it.startsWith("/")) it else if (it.isEmpty()) "" else "/$it" })) }
         Prefs.put(this, "custom", custom.toString())
-        Prefs.put(this, "dash", state.filter { it.second }.joinToString(",") { it.first.id })
+        Prefs.put(this, prefKey, state.filter { it.second }.joinToString(",") { it.first.id })
         WingmanWidget.updateAll(this)
-        val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-        setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+        setResult(RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, wid))
         finish()
     }
 }

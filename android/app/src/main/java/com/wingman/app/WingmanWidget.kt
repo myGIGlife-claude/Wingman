@@ -190,8 +190,8 @@ class WingmanWidget : AppWidgetProvider() {
             "check:go" -> R.drawable.i_check_go; "spin:ink" -> R.drawable.i_spin_ink; "link:ink" -> R.drawable.i_link_ink; "refresh:dim" -> R.drawable.i_refresh_dim; else -> R.drawable.i_fly_ink
         }
 
-        private fun qbtn(c: Context, label: String, ic: String, locked: Boolean, tap: PendingIntent): RemoteViews {
-            val v = RemoteViews(c.packageName, R.layout.s_qbtn)
+        private fun qbtn(c: Context, label: String, ic: String, locked: Boolean, tap: PendingIntent, layout: Int = R.layout.s_qbtn): RemoteViews {
+            val v = RemoteViews(c.packageName, layout)
             v.setTextViewText(R.id.q_label, if (locked) "$label ✕" else label)
             v.setImageViewResource(R.id.q_icon, if (locked) icon("lock", "dim") else icon(ic, "ink"))
             v.setInt(R.id.qb, "setBackgroundResource", if (locked) R.drawable.btn_ghost else R.drawable.btn_amber)
@@ -219,6 +219,7 @@ class WingmanWidget : AppWidgetProvider() {
         fun build(c: Context, kind: String = "all", id: Int = 0): RemoteViews {
             if (kind == "targets") return buildTargets(c, id)
             if (kind == "single") return buildSingle(c, id)
+            if (kind == "actions") return buildActions(c, id)
             val v = buildBody(c, kind)
             val at = Prefs.get(c, "model_at").toLongOrNull()
             if (at != null && kind != "actions" && kind != "stock") v.addView(R.id.content, RemoteViews(c.packageName, R.layout.s_updated).also {
@@ -251,7 +252,6 @@ class WingmanWidget : AppWidgetProvider() {
             if (kind == "dash") { dashSections(c, f, now, refresh, add); return v }
             if (kind == "oc") { add(panel(c, homeOc(f, now), now)); return v }
             if (kind == "stock") { add(stockCard(c, f, now)); return v }
-            if (kind == "actions") { quickButtons(c, f, now, refresh, add); return v }
             if (kind == "trip") {
                 val one = listOf("oc")
                 when (m.phase) { "traveling" -> travelingSections(c, m, f, one, now, refresh, add); "abroad" -> abroadSections(c, m, f, one, now, refresh, add); else -> homeTripSections(c, m, f, one, now, refresh, add) }
@@ -457,6 +457,43 @@ class WingmanWidget : AppWidgetProvider() {
             return v
         }
 
+        // Shortcut buttons for the given ids. Fly greys out and locks near your OC; your own shortcuts come from the Dashboard editor.
+        private fun buttonViews(c: Context, f: JSONObject, now: Long, ids: List<String>, vertical: Boolean): List<RemoteViews> {
+            val custom = try { org.json.JSONArray(Prefs.get(c, "custom")) } catch (e: Exception) { org.json.JSONArray() }
+            val lay = if (vertical) R.layout.s_qbtn_v else R.layout.s_qbtn
+            return ids.mapIndexedNotNull { i, id ->
+                val tap = { path: String, before: Long -> Notifier.openIntent(c, "https://www.torn.com$path", 70 + i, before) }
+                when (id) {
+                    "fly" -> qbtn(c, "FLY", "fly", Tiles.flyBlocked(f, now), tap("/travelagency.php", f.optLong("flyOkUntil", 0)), lay)
+                    "gym" -> qbtn(c, "GYM", "zap", false, tap("/gym.php", 0), lay); "crimes" -> qbtn(c, "CRIMES", "target", false, tap("/loader.php?sid=crimes", 0), lay)
+                    "items" -> qbtn(c, "ITEMS", "box", false, tap("/item.php", 0), lay); "spin" -> qbtn(c, "SPIN", "spin", false, tap("/page.php?sid=spinTheWheel", 0), lay)
+                    else -> custom.optJSONObject(id.removePrefix("c").toIntOrNull()?.minus(1) ?: -1)?.let { o ->
+                        val path = o.optString("path"); if (!path.startsWith("/")) null else qbtn(c, o.optString("name").ifEmpty { "LINK" }.uppercase().take(8), "link", false, tap(path, 0), lay)
+                    }
+                }
+            }
+        }
+
+        // The Actions widget: your chosen buttons in a row, or stacked when the widget is one column wide.
+        private fun buildActions(c: Context, wid: Int): RemoteViews {
+            val f = Model.parse(Prefs.get(c, "model"))?.facts ?: JSONObject()
+            val now = System.currentTimeMillis() / 1000
+            val ids = Tiles.dash(Prefs.get(c, "actions_$wid").ifEmpty { Tiles.ACTIONS_DEFAULT }).filter { id -> Tiles.DASH.first { it.id == id }.button }
+            val width = AppWidgetManager.getInstance(c).getAppWidgetOptions(wid).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+            if (width in 1..139) {
+                val v = RemoteViews(c.packageName, R.layout.w_actions_v)
+                buttonViews(c, f, now, ids, true).forEach { v.addView(R.id.av_list, it) }
+                v.addView(R.id.av_list, RemoteViews(c.packageName, R.layout.s_qbtn_v).also {
+                    it.setImageViewResource(R.id.q_icon, icon("refresh", "dim")); it.setTextViewText(R.id.q_label, ""); it.setInt(R.id.qb, "setBackgroundResource", R.drawable.btn_ghost)
+                    it.setOnClickPendingIntent(R.id.qb, broadcast(c, ActionReceiver.ACTION_REFRESH, 0)) })
+                return v
+            }
+            val v = RemoteViews(c.packageName, R.layout.widget); v.removeAllViews(R.id.content)
+            val refresh = RemoteViews(c.packageName, R.layout.s_sq).also { it.setImageViewResource(R.id.sq_icon, icon("refresh", "dim")); it.setOnClickPendingIntent(R.id.sq, broadcast(c, ActionReceiver.ACTION_REFRESH, 0)) }
+            buttonViews(c, f, now, ids, false).chunked(4).forEachIndexed { i, r -> v.addView(R.id.content, row(c, 8, if (i == 0) r + refresh else r)) }
+            return v
+        }
+
         // The customizable Dashboard: live tiles first, then shortcut buttons, both in the order you chose.
         private fun dashSections(c: Context, f: JSONObject, now: Long, refresh: RemoteViews, add: (RemoteViews?) -> Unit) {
             val ids = Tiles.dash(Prefs.get(c, "dash").ifEmpty { Tiles.DASH_DEFAULT })
@@ -477,18 +514,7 @@ class WingmanWidget : AppWidgetProvider() {
             if ("oc" in ids) Tiles.build("oc", f, now)?.let { add(row(c, 8, listOf(tileView(c, it, now)))) }
             bars.chunked(2).forEach { add(row(c, 12, it)) }
             ids.filter { it in listOf("xanax", "addiction", "booster", "medical", "cash") }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
-            val custom = try { org.json.JSONArray(Prefs.get(c, "custom")) } catch (e: Exception) { org.json.JSONArray() }
-            val btns = ids.filter { id -> Tiles.DASH.first { it.id == id }.button }.mapIndexedNotNull { i, id ->
-                val tap = { path: String, before: Long -> Notifier.openIntent(c, "https://www.torn.com$path", 70 + i, before) }
-                when (id) {
-                    "fly" -> { val locked = Tiles.flyBlocked(f, now); qbtn(c, "FLY", "fly", locked, tap("/travelagency.php", f.optLong("flyOkUntil", 0))) }
-                    "gym" -> qbtn(c, "GYM", "zap", false, tap("/gym.php", 0)); "crimes" -> qbtn(c, "CRIMES", "target", false, tap("/loader.php?sid=crimes", 0))
-                    "items" -> qbtn(c, "ITEMS", "box", false, tap("/item.php", 0)); "spin" -> qbtn(c, "SPIN", "spin", false, tap("/page.php?sid=spinTheWheel", 0))
-                    else -> custom.optJSONObject(id.removePrefix("c").toInt() - 1)?.let { o ->
-                        val path = o.optString("path"); if (!path.startsWith("/")) null else qbtn(c, o.optString("name").ifEmpty { "LINK" }.uppercase().take(8), "link", false, tap(path, 0))
-                    }
-                }
-            }
+            val btns = buttonViews(c, f, now, ids.filter { id -> Tiles.DASH.first { it.id == id }.button }, false)
             btns.chunked(3).forEachIndexed { i, r -> add(row(c, 8, if (i == btns.chunked(3).lastIndex) r + refresh else r)) }
             if (btns.isEmpty()) add(row(c, 8, listOf(refresh)))
         }
