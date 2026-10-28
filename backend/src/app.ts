@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
 import { currentModel, type Ctx } from './tick.ts';
 import { tickAll, ownerCtx, userCtx, type Secrets } from './accounts.ts';
-import { addDevice, getSettings, putSettings, setBought, getState, getUser, putUser, userByTokenHash, deleteUser, OWNER } from './store.ts';
+import { addTester, addDevice, getSettings, putSettings, setBought, getState, getUser, putUser, userByTokenHash, deleteUser, OWNER } from './store.ts';
 import { DESTS } from './plan.ts';
 import { push } from './fcm.ts';
 import { encrypt, hashToken, newToken } from './crypto.ts';
@@ -30,12 +30,20 @@ export function buildApp(S: AppSecrets, logger = true) {
     return ++t.n > 10;
   };
 
+  const SITE = 'https://wingman.mygig.life';
+  const testerTries = new Map<string, { n: number; reset: number }>();
+
   // Every route except /tick and /signup needs a player: the owner's shared secret, or a personal token from /signup.
   app.decorateRequest('ctx', null);
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?')[0];
     if (path === '/tick') { if (!same(req.headers['x-tick-key'], S.tickSecret)) return reply.code(401).send({ error: 'unauthorized' }); return; }
     if (path === '/signup') return;
+    if (path === '/testers') {
+      reply.header('access-control-allow-origin', SITE).header('access-control-allow-methods', 'POST, OPTIONS').header('access-control-allow-headers', 'content-type').header('vary', 'origin');
+      if (req.method === 'OPTIONS') return reply.code(204).send();
+      return;
+    }
     const k = String(req.headers['x-wingman-key'] ?? '');
     if (k && S.appSecret && same(k, S.appSecret) && S.tornKey) { (req as any).ctx = ownerCtx(S); return; }
     const u = k.length >= 32 ? await userByTokenHash(hashToken(k)) : undefined;
@@ -65,6 +73,17 @@ export function buildApp(S: AppSecrets, logger = true) {
     // Signing up again with the same key replaces the token (lost phone) and turns the account back on.
     await putUser({ uid, name: p.name, tornKeyEnc: encrypt(key, S.encSecret), tokenHash: hashToken(token), active: true, hasDevice: old?.hasDevice ?? false, lastTickAt: old?.lastTickAt ?? 0, createdAt: old?.createdAt ?? Math.floor(Date.now() / 1000) });
     return { token, name: p.name };
+  });
+
+  // Test-APK list for the website form. Public, so it takes only a plausible address, drops bots that fill the hidden field, and is limited per address.
+  app.post('/testers', async (req, reply) => {
+    const now = Date.now(), t = testerTries.get(req.ip);
+    if (!t || t.reset < now) testerTries.set(req.ip, { n: 1, reset: now + 3_600_000 }); else if (++t.n > 5) return reply.code(429).send({ error: 'too many attempts, try later' });
+    const b: any = req.body ?? {}, email = String(b.email ?? '').trim().toLowerCase();
+    if (b.website) return { ok: true }; // honeypot: a person never sees this field
+    if (email.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return reply.code(400).send({ error: 'enter a valid email address' });
+    await addTester(email);
+    return { ok: true };
   });
 
   app.get('/me', async req => { const c = ctxOf(req); return { id: c.uid, ffKey: !!c.ffKey }; });

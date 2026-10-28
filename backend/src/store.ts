@@ -58,3 +58,6 @@ export async function takeTickLease(now: number, secs: number): Promise<boolean>
   });
 }
 export const releaseTickLease = () => db.doc('shared/tickLease').set({ until: 0 });
+
+// Test-APK sign-ups from the website. One document per address, so repeats do not pile up.
+export const addTester = (email: string) => db.doc(`testers/${encodeURIComponent(email)}`).set({ email, at: Math.floor(Date.now() / 1000) }, { merge: true });

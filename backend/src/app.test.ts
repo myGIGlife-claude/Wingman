@@ -32,3 +32,12 @@ test('sign-up attempts are limited per address', async () => {
   for (let i = 0; i < 12; i++) last = (await open.inject({ method: 'POST', url: '/signup', headers: { 'x-invite-code': 'bad' }, payload: {} })).statusCode;
   assert.equal(last, 429);
 });
+
+test('tester form rejects bad addresses, silently drops bots, and answers CORS for the site only', async () => {
+  const a = buildApp({ ...base, encSecret: 'enc' }, false);
+  const pre = await a.inject({ method: 'OPTIONS', url: '/testers' });
+  assert.equal(pre.statusCode, 204);
+  assert.equal(pre.headers['access-control-allow-origin'], 'https://wingman.mygig.life');
+  assert.equal((await a.inject({ method: 'POST', url: '/testers', payload: { email: 'nope' } })).statusCode, 400);
+  assert.equal((await a.inject({ method: 'POST', url: '/testers', payload: { email: 'bot@example.com', website: 'x' } })).statusCode, 200);
+});
