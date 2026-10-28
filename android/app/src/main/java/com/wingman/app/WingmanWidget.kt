@@ -45,7 +45,6 @@ class WingmanWidget : AppWidgetProvider() {
                 f.optLong("flyOkUntil", 0).takeIf { it > 0 }?.let { listOf(it - 7200, it) },
                 f.optLong("ocReadyAt", 0).takeIf { it > 0 }?.let { listOf(it - 1800, it, it - 7200) },
                 f.optLong("leaveBy", 0).takeIf { it > 0 }?.let { listOf(it - 600, it) },
-                targetItems(c).mapNotNull { t -> t.takeIf { !it.isNull("until") }?.optLong("until") }.takeIf { it.isNotEmpty() },
             ).flatten().filter { it > now + 1 }
             val next = marks.minOrNull() ?: return
             try {
@@ -361,14 +360,7 @@ class WingmanWidget : AppWidgetProvider() {
                 v.setViewVisibility(R.id.tg_ff, View.VISIBLE); v.setTextViewText(R.id.tg_ff, "FF\n%.1f".format(ff))
                 v.setTextColor(R.id.tg_ff, rgb(k)); v.setInt(R.id.tg_ff, "setBackgroundResource", chipBg(k))
             }
-            val until = if (t.isNull("until")) 0L else t.optLong("until")
-            val hosp = t.optString("state") == "Hospital"
-            if (hosp && until > now) {
-                v.setTextViewText(R.id.tg_pill, "● HOSPITAL"); v.setTextColor(R.id.tg_pill, STOP); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_stop)
-                v.setViewVisibility(R.id.tg_timer, View.VISIBLE); countdown(v, R.id.tg_timer, until - now)
-            } else {
-                v.setTextViewText(R.id.tg_pill, if (hosp) "● OUT NOW" else "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go)
-            }
+            v.setTextViewText(R.id.tg_pill, "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go)
             v.setOnClickFillInIntent(R.id.tg_row, Intent().putExtra("url", "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}"))
             return v
         }

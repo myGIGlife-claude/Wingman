@@ -192,7 +192,7 @@ Long-press your home screen, tap **Widgets** and find **Wingman**. There are eig
 | **Wingman · Trip** | Landing, leave-by and OC timers, the next trip, and the Fly or Buy button | 4×4 |
 | **Wingman · Stock** | Your item's stock, price and restock estimate | 4×3 |
 | **Wingman · Actions** | Fly, Gym, Crimes and Items buttons | 4×2 |
-| **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges and hospital release timers, plus your energy and hospital status on top | 3×5 |
+| **Wingman · Targets** | Scrollable attack list: offline players you can beat, with difficulty badges, plus your energy and hospital status on top | 3×5 |
 | **Wingman · Dashboard** | Build your own: OC countdown, bars, Xanax cooldown, addiction watch, hospital and shortcut buttons (Gym, Fly, Crimes, Items, Spin the wheel, your own Torn pages) | 3×4 |
 
 **Foldable phones:** the focused widgets can be as narrow as three columns, so on a Fold's inner screen you can put the Dashboard on one side and the Targets list on the other.
@@ -223,7 +223,7 @@ The **Wingman · Targets** widget reads your in-game **Target list** (add player
 
 - **Offline** for at least the time you choose (default 60 minutes).
 - **Not too strong.** Other players' battle stats are private, so strength is judged by **level**: their level must be at most yours plus a margin you set (default 0, meaning your level or lower; use a negative number to be stricter). Level is only a rough guide, so check a target before you attack.
-- Only players you can attack right now (**Okay**) or who are **in hospital**. Hospital players show a live countdown to their release. Players in jail, abroad or in federal jail are left out.
+- Only players you can attack right now (**Okay**). Players in hospital, jail, abroad or in federal jail are left out.
 - Most recently active first, so long-abandoned accounts sink to the bottom.
 
 ### Optional: all offline players, with difficulty (FF Scouter)
@@ -237,7 +237,7 @@ Your Target list is short. For **every offline player ranked by difficulty**, Wi
 3. Store it as a secret named `FFSCOUTER_KEY` in your Google project, then redeploy the backend: `printf %s "YOUR_FF_KEY" | gcloud secrets create FFSCOUTER_KEY --data-file=-`, then repeat the deploy command from step 7.
 4. In the app, open **Targets**, switch **Use FF Scouter** on and choose the difficulty to show (fair-fight score) (default 2.0; lower means weaker targets).
 
-Wingman asks FF Scouter every two minutes for players at your chosen difficulty and the two steps below it (so you see a mix, easiest first), keeps the ones offline long enough, then looks up each one's public profile through the Torn API to add hospital release times. The widget list scrolls, so every match is reachable. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
+Wingman asks FF Scouter every two minutes for players at your chosen difficulty and the two steps below it (so you see a mix, easiest first), keeps the ones offline long enough, then looks up each one's public profile through the Torn API to check they can be attacked. The widget list scrolls, so every match is reachable. FF Scouter has its own rate limits and terms. If it is off or the key is missing, the widget falls back to your Target list.
 
 Tap a row to open that player's attack page. **You press Torn's own Attack button**: Wingman never attacks for you. Set the filters in the app under **Targets**.
 

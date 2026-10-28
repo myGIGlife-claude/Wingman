@@ -17,10 +17,10 @@ test('the level margin lets stronger players in', () => {
   assert.deepEqual(pickTargets([t(1, { level: 45 })], { ...opt, maxAbove: 5 }).matches.map(x => x.id), [1]);
   assert.equal(pickTargets([t(1, { level: 45 })], opt).matches.length, 0);
 });
-test('hospital players need a future release time, and sort after attackable ones by soonest release', () => {
-  const list = [t(1, { state: 'Hospital', until: now + 900 }), t(2, { state: 'Hospital', until: now + 100 }), t(3), t(4, { state: 'Hospital', until: now - 5 })];
+test('players in hospital are left out', () => {
+  const list = [t(1, { state: 'Hospital', until: now + 900 }), t(2, { state: 'Hospital', until: now - 5 }), t(3)];
   const r = pickTargets(list, opt);
-  assert.deepEqual(r.matches.map(x => x.id), [3, 2, 1]); assert.equal(r.total, 3);
+  assert.deepEqual(r.matches.map(x => x.id), [3]); assert.equal(r.total, 1);
 });
 test('limit applies after sorting, most recently active first, total counts all matches', () => {
   const list = [t(1, { lastAction: now - 9000 }), t(2, { lastAction: now - 8000 }), t(3, { lastAction: now - 7000 })];

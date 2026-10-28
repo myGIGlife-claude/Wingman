@@ -19,10 +19,6 @@ test('with FF Scouter the level cap is skipped, and easiest comes first', () => 
   assert.deepEqual(pickTargets(list, { ...opt, useFF: true }).matches.map(x => x.id), [2, 3, 1]);
   assert.equal(pickTargets(list, opt).matches.length, 0); // without FF, level 90 vs 40 is rejected
 });
-test('hospital players still sort by release time with FF data', () => {
-  const list = [t(1, { state: 'Hospital', until: now + 500 }), t(2, { state: 'Hospital', until: now + 50 }), t(3)];
-  assert.deepEqual(pickTargets(list, { ...opt, useFF: true }).matches.map(x => x.id), [3, 2, 1]);
-});
 test('FF settings are validated', () => {
   assert.deepEqual(sanitizeSettings({ ffEnabled: true, ffMaxFF: 2.46 }), { ffEnabled: true, ffMaxFF: 2.5 });
   assert.deepEqual(sanitizeSettings({ ffEnabled: 'yes', ffMaxFF: 9 }), {});
