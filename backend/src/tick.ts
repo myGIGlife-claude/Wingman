@@ -136,13 +136,17 @@ export async function tick({ uid, key, ffKey }: Ctx): Promise<{ ok: boolean; pha
   if (alertOn(cfg, 'award_earned') && (!st.awards || t - st.awards.at >= 600)) {
     try { st.awards = { at: t, ...(await fetchAwards(key)) }; } catch { /* try again in 10 minutes */ st.awards = { ...(st.awards ?? { medals: null, honors: null }), at: t }; }
   }
-  let chain: { current: number; left: number } | null = null;
-  if (alertOn(cfg, 'chain_expiring') && !(st.chainOffUntil > t)) {
-    try { chain = await fetchChain(key, t); } catch (e: any) { if (!isRateLimit(e)) st.chainOffUntil = t + 3600; } // no faction access: stop asking for an hour
+  // Chain watch: polled every tick while a chain runs and every 5 minutes otherwise. A key without faction access is not asked again for an hour.
+  if (!(st.chainOffUntil > t) && (!st.chain || t - st.chain.at >= (st.chain.current > 0 ? 30 : 300))) {
+    try {
+      const c = await fetchChain(key, t);
+      st.chain = { at: t, current: c?.current ?? 0, max: c?.max ?? 0, endAt: c ? Math.round((t + c.left) / 5) * 5 : null }; // rounded so the widget is not re-sent for a second of drift
+    } catch (e: any) { if (!isRateLimit(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } }
   }
+  const chain = st.chain?.current > 0 && st.chain.endAt ? { current: st.chain.current, left: st.chain.endAt - t } : null;
   const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, st.extra);
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain });
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await push(uid, slimForPush(model), events); } catch (e) {
@@ -177,5 +181,5 @@ export async function currentModel({ uid, key, ffKey }: Ctx, fresh = false): Pro
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(hist[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
-    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), st.extra);
+    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), { ...st.extra, chain: st.chain });
 }

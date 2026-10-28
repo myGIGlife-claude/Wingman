@@ -84,11 +84,11 @@ export async function fetchAwards(key: string): Promise<{ medals: number | null;
   return { medals: n(j.medals_awarded, j.medals_time), honors: n(j.honors_awarded, j.honors_time) };
 }
 
-// The player's faction chain, or null when they have none or the key cannot read it. left is seconds until it breaks.
-export async function fetchChain(key: string, now: number): Promise<{ current: number; left: number } | null> {
+// The player's faction chain, or null when they have none. left is seconds until it breaks. Throws when the key cannot read faction data.
+export async function fetchChain(key: string, now: number): Promise<{ current: number; max: number; left: number } | null> {
   const j = await get(`https://api.torn.com/faction/?selections=chain&key=${key}&comment=Wingman`);
   const c = j.chain;
   if (!c || !(c.current > 0)) return null;
   const to = Number(c.timeout);
-  return Number.isFinite(to) ? { current: Number(c.current), left: to > 1e9 ? to - now : to } : null;
+  return Number.isFinite(to) ? { current: Number(c.current), max: Number(c.max) || 0, left: to > 1e9 ? to - now : to } : null;
 }

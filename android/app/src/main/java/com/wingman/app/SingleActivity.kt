@@ -29,6 +29,7 @@ class SingleActivity : Activity() {
             "BARS" to listOf(Item("energy", "Energy", "number and bar"), Item("nerve", "Nerve", "number and bar"), Item("life", "Health", "number and bar")),
             "COOLDOWNS" to listOf(Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("drug", "Drug cooldown", ""), Item("booster", "Booster cooldown", ""),
                 Item("medical", "Medical cooldown", ""), Item("addiction", "Addiction watch", "penalty and rehabs")),
+            "FACTION" to listOf(Item("chain", "Chain watch", "hits and time before it breaks (needs faction access on your key)")),
             "OC AND STATUS" to listOf(Item("oc", "OC countdown", "colored by how long you have"), Item("hospital", "Hospital status", "countdown if you are in"), Item("jail", "Jail status", "countdown if you are in"),
                 Item("cash", "Cash", ""), Item("next", "Next step", "Xanax, gym, crimes or fly"), Item("targets", "Targets", "how many players match your filters")),
             "BUTTONS" to listOf(Item("gym", "Gym", "opens the gym"), Item("fly", "Fly", "locks near your OC"), Item("crimes", "Crimes", "opens crimes"), Item("items", "Items", "opens your items"),
