@@ -5,7 +5,7 @@ export const ALERT_DEFAULTS: Record<string, boolean> = {
   ready_to_fly: true, landed_in_stock: true, landed_sold_out: true, restock: true, leave_soon: true, leave_now: true,
   landed_home: true, step_ready: true, oc_ready: true, hospital_out: true, jail_out: true, addiction_up: true,
   energy_full: false, nerve_full: false, life_full: false, drug_ready: false, booster_ready: false, medical_ready: false,
-  medical_low: false, booster_low: false, abroad_long: false, award_earned: false, chain_expiring: false,
+  medical_low: false, booster_low: false, abroad_long: false, award_earned: false, chain_expiring: false, npc_attack: false, npc_soon: false,
 };
 export type Settings = Cfg & { tz: string; alerts: Record<string, boolean>; targetMaxLevelAbove: number; targetMinOfflineMin: number; ffEnabled: boolean; ffMaxFF: number };
 export const SETTING_DEFAULTS: Settings = { ...DEFAULTS, tz: 'America/New_York', alerts: {}, targetMaxLevelAbove: 0, targetMinOfflineMin: 60, ffEnabled: false, ffMaxFF: 2 };

@@ -45,6 +45,8 @@ class MainActivity : Activity() {
         AlertDef("life_full", "Health full", "Your life bar is full", "YOUR STATUS", false),
         AlertDef("award_earned", "New medal or honor", "You earned a medal or honor (checked every 10 minutes)", "YOUR STATUS", false),
         AlertDef("chain_expiring", "Chain about to break", "Your faction chain has under 2 minutes left (needs faction access on your key)", "YOUR STATUS", false),
+        AlertDef("npc_soon", "NPC attack soon", "An NPC attack starts in 10 minutes (Loot Rangers)", "LOOT", false),
+        AlertDef("npc_attack", "NPC attack is on", "An NPC attack is underway, with who to hit first", "LOOT", false),
         AlertDef("step_ready", "Xanax, gym or crimes ready", "Your next home step is ready", "BARS AND COOLDOWNS"),
         AlertDef("energy_full", "Energy full", "Your energy bar is full", "BARS AND COOLDOWNS", false),
         AlertDef("nerve_full", "Nerve full", "Your nerve bar is full", "BARS AND COOLDOWNS", false),

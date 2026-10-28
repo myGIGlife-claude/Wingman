@@ -510,7 +510,7 @@ class WingmanWidget : AppWidgetProvider() {
             // The OC countdown gets a full-width card; other tiles pair up.
             if ("oc" in ids) Tiles.build("oc", f, now)?.let { add(row(c, 8, listOf(tileView(c, it, now)))) }
             bars.chunked(2).forEach { add(row(c, 12, it)) }
-            ids.filter { it in listOf("location", "xanax", "addiction", "booster", "medical", "chain", "cash") }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
+            ids.filter { it in listOf("location", "xanax", "addiction", "booster", "medical", "chain", "npc", "cash") }.mapNotNull { Tiles.build(it, f, now) }.map { tileView(c, it, now) }.chunked(2).forEach { add(row(c, 8, it)) }
             val btns = buttonViews(c, f, now, ids.filter { id -> Tiles.DASH.first { it.id == id }.button }, false)
             btns.chunked(3).forEachIndexed { i, r -> add(row(c, 8, if (i == btns.chunked(3).lastIndex) r + refresh else r)) }
             if (btns.isEmpty()) add(row(c, 8, listOf(refresh)))

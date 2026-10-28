@@ -99,3 +99,13 @@ export function chainEvents(ch: { current: number; left: number } | null | undef
   if (!ch || ch.current < 10 || ch.left <= 0 || ch.left > 120) return [];
   return [{ key: `chain:${Math.floor(t / 300)}`, type: 'chain_expiring', text: `Chain at ${ch.current} runs out in ${ch.left}s`, url: `${TORN}/factions.php` }];
 }
+
+// NPC attacks (optional alerts): one when an attack goes live, one 10 minutes before a set attack.
+export function npcEvents(prevState: string | undefined, f: { state: string; at: number | null; targetId: number | null; targetName: string | null } | null | undefined, t: number): Evt[] {
+  if (!f) return [];
+  const out: Evt[] = [];
+  const hit = f.targetId ? `${TORN}/page.php?sid=attack&user2ID=${f.targetId}` : `${TORN}/loader.php?sid=attack`;
+  if (f.state === 'live' && prevState && prevState !== 'live') out.push({ key: `npc_live:${f.at ?? 0}`, type: 'npc_attack', text: `NPC attack is underway${f.targetName ? ` — ${f.targetName} first` : ''}`, url: hit });
+  if (f.state === 'set' && f.at && f.at - t > 0 && f.at - t <= 600) out.push({ key: `npc_soon:${f.at}`, type: 'npc_soon', text: `NPC attack starts in ${Math.ceil((f.at - t) / 60)} min`, url: hit });
+  return out;
+}

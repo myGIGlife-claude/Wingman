@@ -2,6 +2,7 @@ import './firebase.ts';
 import { getFirestore } from 'firebase-admin/firestore';
 import { fetchYata, type YataSnapshot } from './yata.ts';
 import { observe, type Hist } from './restock.ts';
+import { fetchLoot, type LootFact } from './loot.ts';
 
 // Stock reports and restock history are the same for every player, so they are fetched and stored once, not per user.
 const db = getFirestore();
@@ -54,4 +55,16 @@ export async function seedHistFrom(old: Record<string, Hist> | undefined) {
   if (!old || Object.keys(hist).length) return;
   await loadHist();
   if (!Object.keys(hist).length) hist = old;
+}
+
+// NPC attack times: the same for every player, so fetched once a minute for the process, in the background (see sharedYata).
+let loot: LootFact | null = null, lootAt = 0, lootFailedAt = 0, lootInflight: Promise<void> | null = null;
+export async function sharedLoot(now: number): Promise<LootFact | null> {
+  if (now - lootAt >= 60 && now - lootFailedAt >= 60 && !lootInflight) {
+    lootInflight = (async () => {
+      try { loot = await fetchLoot(); lootAt = now; } catch { lootFailedAt = now; } finally { lootInflight = null; }
+    })();
+  }
+  if (!lootAt && lootInflight) await Promise.race([lootInflight, new Promise(r => setTimeout(r, 1500))]);
+  return loot;
 }

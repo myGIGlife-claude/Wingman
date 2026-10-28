@@ -4,10 +4,10 @@ import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
 import { findStock } from './yata.ts';
 import { widgetModel, type Widget } from './model.ts';
-import { diffEvents, statusEvents, abroadLongEvents, awardEvents, chainEvents, LOW_CD_SECS, type Evt, type Flags } from './events.ts';
+import { diffEvents, statusEvents, abroadLongEvents, awardEvents, chainEvents, npcEvents, LOW_CD_SECS, type Evt, type Flags } from './events.ts';
 import { alertOn } from './settings.ts';
 import { getSettings, getState, saveState } from './store.ts';
-import { sharedYata, sharedHist, seedHistFrom } from './shared.ts';
+import { sharedYata, sharedHist, seedHistFrom, sharedLoot } from './shared.ts';
 import { push } from './fcm.ts';
 import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { estimate } from './restock.ts';
@@ -108,6 +108,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
   // Stock reports and restock history are shared by all players and fetched once a minute for the whole server.
   st.yata = await timed('yata', sharedYata(t));
   const hist = await timed('hist', sharedHist());
+  const npc = await timed('loot', sharedLoot(t));
 
   // In-game Targets list, refreshed every 2 minutes (1 to 3 API calls).
   if (!st.targets || t - st.targets.at >= 120) {
@@ -161,9 +162,9 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     } catch (e: any) { if (!isRateLimit(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } }
   }
   const chain = st.chain?.current > 0 && st.chain.endAt ? { current: st.chain.current, left: st.chain.endAt - t } : null;
-  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
+  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t), ...npcEvents(st.npcState, npc, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain });
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain, npc });
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await timed('push', push(uid, slimForPush(model), events)); } catch (e) {
@@ -182,7 +183,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     ...st, phase: p.phase, nextId: p.next?.id ?? null, stockQty: p.stock ? p.stock.qty : null, ocNow: p.ocNow,
     arrival: p.phase === 'traveling' ? p.landAt : st.arrival ?? null,
     homeAt: prev.phase === 'traveling' && p.phase === 'home' ? st.arrival : st.homeAt ?? null,
-    landedCash: landedCash ?? null, bought, sent, model, flags, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
+    landedCash: landedCash ?? null, bought, sent, model, flags, npcState: npc?.state ?? st.npcState ?? null, lastPlace: p.phase === 'abroad' ? p.here.name : st.lastPlace ?? null
   };
   delete (next as any).snapshot; delete (next as any).yata; // old versions stored the raw Torn profile here; nothing reads it
   if (!sameState(next, stored)) await saveState(uid, next); // skip rewriting identical state
@@ -198,5 +199,5 @@ export async function currentModel({ uid, key, ffKey }: Ctx, fresh = false): Pro
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(hist[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
-    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), { ...st.extra, chain: st.chain });
+    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), { ...st.extra, chain: st.chain, npc: (await sharedLoot(user.timestamp)) });
 }

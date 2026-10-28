@@ -68,3 +68,15 @@ test('landing with no stock data says unknown, never sold out', () => {
   assert.doesNotMatch(e[0].text, /sold out/);
   assert.match(diffEvents({ phase: 'traveling', arrival: 900 }, abroad({ stock: { qty: 0, cost: 1, update: 900 } }), cfg, false)[0].text, /sold out/);
 });
+
+import { npcEvents } from './events.ts';
+test('NPC alerts: live fires on the change to live, soon fires once inside 10 minutes', () => {
+  const live = { state: 'live', at: 900, targetId: 20, targetName: 'Fernando' };
+  assert.deepEqual(npcEvents('set', live, 1000).map(e => e.type), ['npc_attack']);
+  assert.deepEqual(npcEvents('live', live, 1000), []);
+  assert.deepEqual(npcEvents(undefined, live, 1000), []); // first look never fires
+  const set = { state: 'set', at: 1500, targetId: 4, targetName: 'Duke' };
+  assert.deepEqual(npcEvents('none', set, 1000).map(e => e.type), ['npc_soon']);
+  assert.deepEqual(npcEvents('none', { ...set, at: 2000 }, 1000), []);
+  assert.deepEqual(npcEvents('none', null, 1000), []);
+});

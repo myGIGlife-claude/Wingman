@@ -31,16 +31,16 @@ object Tiles {
     val DASH = listOf(
         DashDef("oc", "OC countdown", false), DashDef("location", "Location: in Torn, abroad or flying, with ETA", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
         DashDef("xanax", "Xanax: cooldown, addiction, counts", false), DashDef("addiction", "Addiction watch: penalty and rehabs", false), DashDef("booster", "Booster cooldown", false), DashDef("medical", "Medical cooldown", false),
-        DashDef("chain", "Chain watch: hits and time left", false), DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
+        DashDef("chain", "Chain watch: hits and time left", false), DashDef("npc", "NPC attack time (Loot Rangers)", false), DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
         DashDef("gym", "Gym button", true), DashDef("fly", "Fly button (locks near your OC)", true), DashDef("crimes", "Crimes button", true),
         DashDef("items", "Items button", true), DashDef("spin", "Spin the wheel button", true),
         DashDef("c1", "Custom shortcut 1", true), DashDef("c2", "Custom shortcut 2", true), DashDef("c3", "Custom shortcut 3", true), DashDef("c4", "Custom shortcut 4", true),
     )
     // Sections of the Dashboard builder, in tab order. Every DASH id belongs to one; shortcut buttons are all in "Shortcuts".
-    val GROUPS = listOf("Travel", "Bars", "Cooldowns", "OC", "Faction", "Status", "Shortcuts")
+    val GROUPS = listOf("Travel", "Bars", "Cooldowns", "OC", "Faction", "Loot", "Status", "Shortcuts")
     private val GROUP_OF = mapOf("location" to "Travel", "energy" to "Bars", "nerve" to "Bars", "life" to "Bars",
         "xanax" to "Cooldowns", "addiction" to "Cooldowns", "booster" to "Cooldowns", "medical" to "Cooldowns",
-        "oc" to "OC", "chain" to "Faction", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
+        "oc" to "OC", "chain" to "Faction", "npc" to "Loot", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
     fun group(d: DashDef): String = if (d.button) "Shortcuts" else GROUP_OF[d.id] ?: "Status"
     const val ACTIONS_DEFAULT = "fly,gym,crimes,items"
     const val DASH_DEFAULT = "oc,energy,xanax,hospital,gym,fly,crimes,spin"
@@ -146,6 +146,19 @@ object Tiles {
                 d?.takeIf { it.has("overdoses") && !it.isNull("overdoses") }?.let { "${it.getInt("overdoses")} OD" })
             val sub = parts.joinToString(" · ")
             if (at != null && at > now) Tile("XANAX COOLDOWN", timerTo = at, sub = sub, color = STOP) else Tile("XANAX", "READY", sub = sub, color = GO)
+        }
+        "npc" -> {
+            val n = f.optJSONObject("npc"); val at = n?.l("at")
+            when (n?.optString("state")) {
+                null -> Tile("NPC ATTACK", "—", sub = "no data yet", color = DIM)
+                "live" -> Tile("NPC ATTACK", "LIVE", sub = (n.s("targetName")?.let { "hit $it first · " } ?: "") + "via Loot Rangers", color = GO)
+                "set" -> {
+                    val order = n.optJSONArray("order")?.let { a -> (0 until a.length()).joinToString(", ") { a.getString(it) } } ?: ""
+                    if (at != null && at > now) Tile("NPC ATTACK IN", timerTo = at, sub = if (order.isNotEmpty()) order else "via Loot Rangers", color = AMBER)
+                    else Tile("NPC ATTACK", "SOON", sub = "via Loot Rangers", color = AMBER)
+                }
+                else -> Tile("NPC ATTACK", "NONE", sub = n.s("reason")?.let { "$it · Loot Rangers" } ?: "none set · Loot Rangers", color = DIM)
+            }
         }
         "chain" -> {
             val c = f.optJSONObject("chain"); val end = c?.l("endAt"); val cur = c?.optInt("current") ?: 0; val max = c?.optInt("max") ?: 0

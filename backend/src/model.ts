@@ -3,6 +3,7 @@ import type { Cfg } from './plan.ts';
 import type { Eta } from './restock.ts';
 import type { TargetsView } from './targets.ts';
 import { targetsHash } from './logic.ts';
+import type { LootFact } from './loot.ts';
 
 const TORN = 'https://www.torn.com';
 export interface Primary { label: string; url: string | null; style: 'amber' | 'ghost' | 'stop' }
@@ -14,7 +15,7 @@ export interface Widget {
 
 // Raw numbers for the widget tiles. All times are epoch seconds so the phone can run its own countdowns.
 // Slow-changing numbers fetched every few minutes: addiction penalty and Xanax / overdose counts.
-export interface Extra { at?: number; addiction?: number | null; addictionLabel?: string | null; rehabs?: number | null; xanTaken?: number | null; overdoses?: number | null; chain?: ChainFact | null }
+export interface Extra { at?: number; addiction?: number | null; addictionLabel?: string | null; rehabs?: number | null; xanTaken?: number | null; overdoses?: number | null; chain?: ChainFact | null; npc?: LootFact | null }
 // The faction chain as last seen. endAt is when it breaks (epoch seconds); noAccess means the key cannot read faction data.
 export interface ChainFact { current: number; max: number; endAt: number | null; noAccess?: boolean }
 
@@ -30,6 +31,7 @@ export interface Facts {
   drugs: { addiction: number | null; addictionLabel: string | null; rehabs: number | null; xanTaken: number | null; overdoses: number | null } | null;
   buyMax: number | null; buyWhy: string | null; next: string | null; bought: boolean; fits: boolean | null;
   chain: ChainFact | null;
+  npc: LootFact | null;
 }
 interface Bar { cur: number; max: number; fullAt: number | null }
 
@@ -69,7 +71,7 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, 
     restock: rs ? { eta: rs.eta, overdue: rs.overdue, everySecs: rs.every, samples: rs.samples, soldOutAt: rs.soldOutAt } : null,
     buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
     next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,
-    chain: extra?.chain ?? null,
+    chain: extra?.chain ?? null, npc: extra?.npc ?? null,
   };
 }
 
