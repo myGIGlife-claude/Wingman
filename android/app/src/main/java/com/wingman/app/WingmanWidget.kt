@@ -352,7 +352,15 @@ class WingmanWidget : AppWidgetProvider() {
         // One row of the attack list. Tapping it opens that player's attack page; you press Torn's own Attack button.
         // A widget narrower than this (a foldable's cover screen, or a small slot) gets the compact layout.
         const val COMPACT_DP = 210
-        fun widgetWidthDp(c: Context, id: Int): Int = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+        // The narrowest width the launcher reports for this widget (the minimum, and every size on Android 12+), in dp. 250 when it reports nothing.
+        fun widgetWidthDp(c: Context, id: Int): Int {
+            val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
+            val all = mutableListOf(o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0))
+            if (android.os.Build.VERSION.SDK_INT >= 31) @Suppress("DEPRECATION") o.getParcelableArrayList<android.util.SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)?.forEach { all.add(it.width.toInt()) }
+            return all.filter { it > 0 }.minOrNull() ?: 250
+        }
+        // Settings: "auto" decides by width, "on" always uses the compact rows, "off" never does.
+        fun isCompact(c: Context, id: Int): Boolean = when (Prefs.get(c, "compact")) { "on" -> true; "off" -> false; else -> widgetWidthDp(c, id) < COMPACT_DP }
 
         fun targetRow(c: Context, t: JSONObject, now: Long, compact: Boolean = false): RemoteViews {
             val v = RemoteViews(c.packageName, if (compact) R.layout.s_target_c else R.layout.s_target)
@@ -434,7 +442,7 @@ class WingmanWidget : AppWidgetProvider() {
         // The scrollable attack list widget.
         private fun buildTargets(c: Context, id: Int): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.w_targets)
-            val compact = widgetWidthDp(c, id) < COMPACT_DP
+            val compact = isCompact(c, id)
             val d = targetsData(c)
             val total = d?.optInt("total") ?: 0
             val err = d?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }

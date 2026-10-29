@@ -17,7 +17,7 @@ class TargetsService : RemoteViewsService() {
         override fun onDataSetChanged() { items = WingmanWidget.targetItems(c) }
         override fun onDestroy() {}
         override fun getCount() = items.size
-        override fun getViewAt(i: Int): RemoteViews = WingmanWidget.targetRow(c, items[i], System.currentTimeMillis() / 1000, wid != AppWidgetManager.INVALID_APPWIDGET_ID && WingmanWidget.widgetWidthDp(c, wid) < WingmanWidget.COMPACT_DP)
+        override fun getViewAt(i: Int): RemoteViews = WingmanWidget.targetRow(c, items[i], System.currentTimeMillis() / 1000, wid != AppWidgetManager.INVALID_APPWIDGET_ID && WingmanWidget.isCompact(c, wid))
         override fun getLoadingView(): RemoteViews? = null
         override fun getViewTypeCount() = 2 // the full and the compact row
         override fun getItemId(i: Int) = items.getOrNull(i)?.optLong("id") ?: i.toLong()

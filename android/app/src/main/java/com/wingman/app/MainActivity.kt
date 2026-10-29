@@ -198,7 +198,19 @@ class MainActivity : Activity() {
             addView(label("Offline for at least (minutes)")); addView(tgOff)
             addView(saveButton())
         }
+        // Attack list on narrow widgets (a foldable cover screen): automatic by width, or forced on or off.
+        val compactPick = Picker(listOf("auto" to "Automatic (by widget width)", "on" to "Always compact", "off" to "Never compact"))
+        compactPick.set(listOf("auto", "on", "off").indexOf(Prefs.get(this, "compact").ifEmpty { "auto" }).coerceAtLeast(0))
+        val widthInfo = mono(TextView(this).apply { setPadding(0, dp(4), 0, 0) }, 12f, dim)
+        val widthText = {
+            val m = android.appwidget.AppWidgetManager.getInstance(this)
+            val ws = m.getAppWidgetIds(android.content.ComponentName(this, TargetsWidget::class.java)).map { WingmanWidget.widgetWidthDp(this, it) }
+            widthInfo.text = if (ws.isEmpty()) "No attack list widget on your home screen yet." else "Your attack list widget reports ${ws.joinToString(", ")} dp wide. Automatic goes compact under ${WingmanWidget.COMPACT_DP} dp."
+        }
+        widthText()
+        compactPick.onPick = { Prefs.put(this, "compact", listOf("auto", "on", "off")[compactPick.index]); WingmanWidget.updateAll(this); widthText() }
         section(col, "WIDGET", { "Choose what the widget shows" }, false) {
+            addView(label("Attack list on narrow widgets")); addView(compactPick); addView(widthInfo)
             addView(button("All-in-one widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
             addView(button("Dashboard widget builder", false) { startActivity(Intent(this@MainActivity, DashActivity::class.java)) })
         }
