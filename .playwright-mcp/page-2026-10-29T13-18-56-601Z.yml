@@ -1,0 +1,107 @@
+- generic [active] [ref=f4e1]:
+  - banner [ref=f4e2]:
+    - generic [ref=f4e3]:
+      - link "Wingman" [ref=f4e4] [cursor=pointer]:
+        - /url: /
+      - navigation "Main" [ref=f4e5]:
+        - link "Join the test" [ref=f4e6] [cursor=pointer]:
+          - /url: /#join
+  - main [ref=f4e7]:
+    - heading "Privacy policy" [level=1] [ref=f4e8]
+    - paragraph [ref=f4e9]: Effective October 28, 2026. Version 1.0.
+    - paragraph [ref=f4e10]: Wingman, powered by myGIGlife INC. ("we", "us") runs this website and the Wingman app. This page says what we collect, why, who sees it, and how you delete it.
+    - heading "What we collect" [level=2] [ref=f4e11]
+    - heading "On this website" [level=3] [ref=f4e12]
+    - list [ref=f4e13]:
+      - listitem [ref=f4e14]:
+        - strong [ref=f4e15]: "Test sign-up:"
+        - text: the email address you type in the form, and the time you sent it. We keep it until the test ends, or until you ask us to remove it.
+      - listitem [ref=f4e16]:
+        - strong [ref=f4e17]: "Hosting logs:"
+        - text: our website host (Cloudflare) and our server host (Google Cloud) see your IP address and browser details when you load a page or send the form. They keep ordinary request logs for security and operation.
+      - listitem [ref=f4e18]: This site sets no cookies and uses no ad or analytics trackers.
+    - heading "In the app and on our server" [level=3] [ref=f4e19]
+    - list [ref=f4e20]:
+      - listitem [ref=f4e21]:
+        - strong [ref=f4e22]: Your Torn API key.
+        - text: The app uses it to read your Torn data. We store it encrypted (AES-256-GCM). It is only sent to api.torn.com, over HTTPS, and never shown to other users. Use a Limited access key.
+      - listitem [ref=f4e23]:
+        - strong [ref=f4e24]: Your Torn player ID and name
+        - text: ", taken from Torn when you sign up."
+      - listitem [ref=f4e25]:
+        - strong [ref=f4e26]: Data read from the Torn API
+        - text: "to build your widget and alerts: bars, cooldowns, travel and location, money on hand, organized crime status, your Targets list, and addiction and drug counts. We keep the latest state we need to work out your next alert, not a long history."
+      - listitem [ref=f4e27]:
+        - strong [ref=f4e28]: Your settings
+        - text: (destination, item, alert switches, time zone, and similar).
+      - listitem [ref=f4e29]:
+        - strong [ref=f4e30]: Your phone push token
+        - text: from Firebase Cloud Messaging, so we can send alerts to your device.
+      - listitem [ref=f4e31]:
+        - strong [ref=f4e32]: Your FF Scouter key
+        - text: ", only if you choose to add one. It is stored encrypted and sent only to ffscouter.com."
+    - heading "Why we use it" [level=2] [ref=f4e33]
+    - paragraph [ref=f4e34]: "Only to run Wingman: to read your Torn data, work out timings, send alerts to your phone, and keep your account working. We do not use it for advertising and do not build profiles about you."
+    - heading "Who it goes to" [level=2] [ref=f4e35]
+    - list [ref=f4e36]:
+      - listitem [ref=f4e37]:
+        - strong [ref=f4e38]: Torn
+        - text: "(api.torn.com): your API key and the requests we make with it."
+      - listitem [ref=f4e39]:
+        - strong [ref=f4e40]: Google
+        - text: "(Google Cloud and Firebase, United States): runs our server and database, and delivers push alerts."
+      - listitem [ref=f4e41]:
+        - strong [ref=f4e42]: "Cloudflare:"
+        - text: hosts this website.
+      - listitem [ref=f4e43]:
+        - strong [ref=f4e44]: FF Scouter
+        - text: "(ffscouter.com): your FF Scouter key and target requests, only if you turn that feature on."
+      - listitem [ref=f4e45]:
+        - strong [ref=f4e46]: YATA
+        - text: "(yata.yt): we fetch public shop stock from it. No personal data about you is sent."
+      - listitem [ref=f4e47]:
+        - strong [ref=f4e48]: Loot Rangers
+        - text: "(api.lzpt.io): we fetch the public NPC attack schedule from it. No personal data about you is sent."
+    - paragraph [ref=f4e49]: We do not sell your personal information and do not share it for advertising.
+    - heading "How long we keep it" [level=2] [ref=f4e50]
+    - paragraph [ref=f4e51]: Account data stays until you delete your account. Test sign-up emails stay until the test ends or you ask us to remove them. Server logs are kept for the period set by Google Cloud, which is 30 days by default. Deleted data can remain in backups for a short time before it ages out.
+    - heading "Your choices" [level=2] [ref=f4e52]
+    - list [ref=f4e53]:
+      - listitem [ref=f4e54]:
+        - strong [ref=f4e55]: "Delete your account:"
+        - text: email us and we will remove your key, settings, state and device tokens from our database within 30 days.
+      - listitem [ref=f4e56]:
+        - strong [ref=f4e57]: Revoke your Torn key
+        - text: any time in Torn. Wingman stops working for you at once.
+      - listitem [ref=f4e58]:
+        - strong [ref=f4e59]: Ask for a copy, a correction, or removal
+        - text: of your data by emailing us. We will answer within 30 days.
+    - heading "Security" [level=2] [ref=f4e60]
+    - paragraph [ref=f4e61]: Connections use HTTPS. Torn and FF Scouter keys are encrypted before they are stored. No system is perfectly secure. If a breach affects you, we will tell you as the law requires.
+    - heading "Children" [level=2] [ref=f4e62]
+    - paragraph [ref=f4e63]: Wingman is not meant for children under 13, and we do not knowingly collect their data. If you think a child gave us data, email us and we will delete it.
+    - heading "Changes" [level=2] [ref=f4e64]
+    - paragraph [ref=f4e65]: If we change this policy in a way that matters, we will update the date above and tell test users by email before the change takes effect.
+    - heading "Contact" [level=2] [ref=f4e66]
+    - generic [ref=f4e67]:
+      - text: Wingman, powered by myGIGlife INC.813 Oak St, Ste 10 - 1190Conway, AR 72032
+      - link "wingman@mygig.life" [ref=f4e68] [cursor=pointer]:
+        - /url: mailto:wingman@mygig.life
+  - contentinfo [ref=f4e69]:
+    - generic [ref=f4e70]:
+      - generic [ref=f4e71]:
+        - link "Wingman" [ref=f4e72] [cursor=pointer]:
+          - /url: /
+        - paragraph [ref=f4e73]: Wingman, powered by myGIGlife INC.
+      - generic [ref=f4e74]:
+        - text: 813 Oak St, Ste 10 - 1190Conway, AR 72032
+        - link "wingman@mygig.life" [ref=f4e75] [cursor=pointer]:
+          - /url: mailto:wingman@mygig.life
+      - generic [ref=f4e76]:
+        - paragraph [ref=f4e77]: Wingman is an independent tool. It is not made by, affiliated with, or endorsed by Torn.
+        - paragraph [ref=f4e78]:
+          - link "Privacy policy" [ref=f4e79] [cursor=pointer]:
+            - /url: /privacy
+          - text: ·
+          - link "Terms of use" [ref=f4e80] [cursor=pointer]:
+            - /url: /terms

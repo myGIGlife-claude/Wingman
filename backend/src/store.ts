@@ -61,3 +61,7 @@ export const releaseTickLease = () => db.doc('shared/tickLease').set({ until: 0 
 
 // Test-APK sign-ups from the website. One document per address, so repeats do not pile up.
 export const addTester = (email: string) => db.doc(`testers/${encodeURIComponent(email)}`).set({ email, at: Math.floor(Date.now() / 1000) }, { merge: true });
+
+// The newest app build. Written by infra/release.mjs; the file itself sits in a private bucket.
+export interface Release { code: number; name: string; size: number; sha: string; object: string; notes: string }
+export const getRelease = async (): Promise<Release | undefined> => (await db.doc('shared/release').get()).data() as Release | undefined;

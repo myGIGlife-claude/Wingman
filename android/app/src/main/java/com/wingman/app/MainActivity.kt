@@ -72,6 +72,7 @@ class MainActivity : Activity() {
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText; private lateinit var buf: EditText
     private lateinit var xanax: Ui.Pill; private lateinit var status: TextView
     private var connected = false
+    private lateinit var updateBar: LinearLayout
     private val summaries = mutableListOf<Pair<TextView, () -> String>>()
 
     private fun mono(t: TextView, size: Float, color: Int, bold: Boolean = false) = t.apply {
@@ -134,6 +135,9 @@ class MainActivity : Activity() {
         col.addView(top)
         col.addView(mono(TextView(this).apply { text = "Read-only Torn helper. You tap every action." }, 12f, dim))
         status = mono(TextView(this).apply { setPadding(0, dp(8), 0, 0) }, 12f, go); col.addView(status)
+        updateBar = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; setBackgroundResource(R.drawable.card_bg); setPadding(dp(16), dp(12), dp(16), dp(12)) }
+        updateBar.layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
+        col.addView(updateBar)
 
         url = field("https://…run.app"); secret = field("app secret"); secret.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         url.setText(Prefs.get(this, "url")); secret.setText(Prefs.get(this, "secret"))
@@ -187,12 +191,13 @@ class MainActivity : Activity() {
         section(col, "TOOLS", { "Tests and battery" }, false) {
             addView(button("Test notification (this phone)", false) { localTest() })
             addView(button("Test push from backend", false) { say("Push requested. Wait a few seconds."); bg { Api.call(this@MainActivity, "POST", "/test") } })
+            addView(button("Check for updates", false) { say("Checking for updates…"); checkUpdate(true) })
             addView(button("Battery: set Unrestricted", false) { batteryHelp() })
         }
 
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col); Ui.fitSystemBars(this) })
         Prefs.get(this, "crash").takeIf { it.isNotEmpty() }?.let { status.text = "LAST CRASH:\n$it"; Prefs.put(this, "crash", "") }
-        if (hasUrl) load()
+        if (hasUrl) { load(); checkUpdate() }
     }
 
     private fun buildAlerts(body: LinearLayout) {
@@ -211,6 +216,25 @@ class MainActivity : Activity() {
             sw.tag = d.key
             title.setTextColor(if (alertState[d.key] ?: d.on) paper else dim)
             row.addView(sw); body.addView(row)
+        }
+    }
+
+    // Asks our server for a newer build (signed-in only). Shows a banner with a download button when there is one.
+    private fun checkUpdate(manual: Boolean = false) = bg {
+        val i = Update.check(this)
+        runOnUiThread {
+            updateBar.removeAllViews()
+            if (i == null) { updateBar.visibility = View.GONE; if (manual) status.text = "You are up to date (v${BuildConfig.VERSION_NAME})."; return@runOnUiThread }
+            updateBar.visibility = View.VISIBLE
+            updateBar.addView(mono(TextView(this).apply { text = "Update available: v${i.name}" }, 14f, amber, true))
+            if (i.notes.isNotEmpty()) updateBar.addView(mono(TextView(this).apply { text = i.notes; setPadding(0, dp(4), 0, 0) }, 12f, dim))
+            updateBar.addView(button("Download and install", true) {
+                say("Downloading update…")
+                bg {
+                    val f = Update.download(this, i) { p -> say("Downloading update… $p%") }
+                    if (f == null) say("Download failed. Try again.") else { say("Opening the installer…"); runOnUiThread { Update.install(this, f) } }
+                }
+            })
         }
     }
 

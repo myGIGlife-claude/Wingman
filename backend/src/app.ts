@@ -2,12 +2,14 @@ import Fastify from 'fastify';
 import { timingSafeEqual } from 'node:crypto';
 import { currentModel, type Ctx } from './tick.ts';
 import { tickAll, ownerCtx, userCtx, type Secrets } from './accounts.ts';
-import { addTester, addDevice, getSettings, putSettings, setBought, getState, getUser, putUser, userByTokenHash, deleteUser, OWNER } from './store.ts';
+import { getRelease, addTester, addDevice, getSettings, putSettings, setBought, getState, getUser, putUser, userByTokenHash, deleteUser, OWNER } from './store.ts';
 import { DESTS } from './plan.ts';
 import { push } from './fcm.ts';
 import { encrypt, hashToken, newToken } from './crypto.ts';
 import { verifyKey, TornError } from './torn.ts';
 import { checkKey } from './keycheck.ts';
+import { getApp } from 'firebase-admin/app';
+import { getStorage } from 'firebase-admin/storage';
 import { sharedYata } from './shared.ts';
 
 const same = (a: unknown, b: string) => {
@@ -136,6 +138,19 @@ export function buildApp(S: AppSecrets, logger = true) {
     if (typeof b.ffKey !== 'string' || b.ffKey.length > 100) return reply.code(400).send({ error: 'ffKey must be a string' });
     await putUser({ uid: c.uid, ffKeyEnc: b.ffKey.trim() ? encrypt(b.ffKey.trim(), S.encSecret) : '' });
     return { ok: true };
+  });
+
+  // App updates, for signed-in players only. /update says what is newest; /update/apk streams it from a private bucket.
+  app.get('/update', async () => {
+    const r = await getRelease();
+    return r ? { code: r.code, name: r.name, size: r.size, sha: r.sha, notes: r.notes } : {};
+  });
+  app.get('/update/apk', async (req, reply) => {
+    const r = await getRelease();
+    if (!r) return reply.code(404).send({ error: 'no release published' });
+    const file = getStorage().bucket(`${getApp().options.projectId}-releases`).file(r.object);
+    reply.header('content-type', 'application/vnd.android.package-archive').header('content-length', r.size).header('x-sha256', r.sha).header('cache-control', 'private, no-store');
+    return reply.send(file.createReadStream());
   });
 
   app.post('/register', async req => { const b: any = req.body; await addDevice(ctxOf(req).uid, String(b.fcmToken), String(b.platform ?? 'android')); return { ok: true }; });

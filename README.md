@@ -281,3 +281,10 @@ cd android && ./gradlew :app:testDebugUnitTest :app:assembleDebug
 Foreign stock data comes from [YATA](https://yata.yt), a community project. Restock estimates are learned from the stock changes Wingman sees.
 
 Wingman is an unofficial community tool. It is **not affiliated with or endorsed by Torn**. You use it at your own risk and are responsible for following Torn's rules.
+
+## Release signing and in-app updates
+
+- The permanent release key lives outside the repo, in `~/.config/wingman/` (`wingman-release.jks` and `signing.properties`, mode 600). Back it up with `infra/backup-keystore.mjs`. If it is lost, no update can be installed over an existing install.
+- Build a signed release: `cd android && ./gradlew :app:assembleRelease` (needs the key; without it the release APK is unsigned). Raise `versionCode` first, every release.
+- Publish it for the app's "Update available" banner: `cd infra && node release.mjs <apk> <versionCode> <versionName> "<notes>"` (see the script header for the environment it needs). Updates are served only to signed-in players, from a private bucket through the backend.
+- Android always asks the player to tap Install. A debug-signed install cannot be updated by a release-signed APK, so move to the release key once with an uninstall and reinstall.

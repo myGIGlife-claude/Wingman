@@ -58,3 +58,10 @@ test('the owner can check the server key but not replace it', async () => {
   assert.equal(r.statusCode, 400);
   assert.match(r.json().error, /set on the server/);
 });
+
+test('updates are only for signed-in players', async () => {
+  const a = buildApp({ ...base, encSecret: 'enc' }, false);
+  assert.equal((await a.inject({ method: 'GET', url: '/update' })).statusCode, 401);
+  assert.equal((await a.inject({ method: 'GET', url: '/update/apk' })).statusCode, 401);
+  assert.equal((await a.inject({ method: 'GET', url: '/update/apk', headers: { 'x-wingman-key': 'wrong' } })).statusCode, 401);
+});

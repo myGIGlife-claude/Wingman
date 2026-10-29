@@ -1,0 +1,287 @@
+- generic [active] [ref=f1e1]:
+  - link "Skip to content" [ref=f1e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=f1e4]:
+    - generic [ref=f1e5]: Ready to fly to Japan, 1h 12m to spare
+    - generic [ref=f1e6]: Item back in stock, buy max (29)
+    - generic [ref=f1e7]: Leave Japan within 5 min to make your OC
+    - generic [ref=f1e8]: Chain at 23,929 runs out in 90s
+    - generic [ref=f1e9]: NPC attack starts in 10 min
+    - generic [ref=f1e10]: Medical cooldown is under 6 hours
+    - generic [ref=f1e11]: OC ready, stay in Torn
+    - generic [ref=f1e12]: New medal earned
+    - generic [ref=f1e13]: Ready to fly to Japan, 1h 12m to spare
+    - generic [ref=f1e14]: Item back in stock, buy max (29)
+    - generic [ref=f1e15]: Leave Japan within 5 min to make your OC
+    - generic [ref=f1e16]: Chain at 23,929 runs out in 90s
+    - generic [ref=f1e17]: NPC attack starts in 10 min
+    - generic [ref=f1e18]: Medical cooldown is under 6 hours
+    - generic [ref=f1e19]: OC ready, stay in Torn
+    - generic [ref=f1e20]: New medal earned
+  - banner [ref=f1e21]:
+    - generic [ref=f1e22]:
+      - link "Wingman" [ref=f1e23] [cursor=pointer]:
+        - /url: /
+      - navigation "Main" [ref=f1e24]:
+        - link "Join the test" [ref=f1e25] [cursor=pointer]:
+          - /url: "#join"
+  - main [ref=f1e26]:
+    - generic [ref=f1e28]:
+      - generic [ref=f1e29]:
+        - heading "Know when to leave." [level=1] [ref=f1e30]:
+          - generic [ref=f1e31]: Know when
+          - generic [ref=f1e32]: to leave.
+        - paragraph [ref=f1e33]: "Wingman watches your Torn account and tells you the next move: when to fly, when the stock lands, when your chain is about to break. It sits on your Android home screen and pings you when it matters."
+        - generic [ref=f1e34]:
+          - link "Join the Android test" [ref=f1e35] [cursor=pointer]:
+            - /url: "#join"
+          - link "See what it shows" [ref=f1e36] [cursor=pointer]:
+            - /url: "#tracks"
+      - generic [ref=f1e37]:
+        - 'img "A Wingman widget stepping through a trip: at home, flying out, abroad, back home, OC ready" [ref=f1e38]':
+          - generic [ref=f1e39]:
+            - generic [ref=f1e40]: 1:17 PM
+            - generic [ref=f1e41]: Wingman
+          - generic [ref=f1e42]:
+            - generic [ref=f1e43]:
+              - generic [ref=f1e44]: AT HOME
+              - generic [ref=f1e45]: sample data
+            - generic [ref=f1e46]:
+              - generic [ref=f1e47]: OC READY IN
+              - generic [ref=f1e48]: 2:41:07
+              - generic [ref=f1e49]: Burglary OC
+            - generic [ref=f1e50]:
+              - generic [ref=f1e51]: FLY WITHIN
+              - generic [ref=f1e52]: 1:12:00
+              - generic [ref=f1e53]: Japan · 3h 10m each way
+            - generic [ref=f1e54]:
+              - generic [ref=f1e55]: FLY
+              - generic [ref=f1e56]: GYM
+              - generic [ref=f1e57]: CRIMES
+        - list "Pick a moment in the trip" [ref=f1e58]:
+          - listitem [ref=f1e59]:
+            - button "At home" [ref=f1e60] [cursor=pointer]
+          - listitem [ref=f1e61]:
+            - button "Flying out" [ref=f1e62] [cursor=pointer]
+          - listitem [ref=f1e63]:
+            - button "In Japan" [ref=f1e64] [cursor=pointer]
+          - listitem [ref=f1e65]:
+            - button "Back home" [ref=f1e66] [cursor=pointer]
+          - listitem [ref=f1e67]:
+            - button "OC ready" [ref=f1e68] [cursor=pointer]
+        - paragraph [ref=f1e69]: This runs a trip the way the app shows it. Pick a step or let it play.
+    - generic [ref=f1e71]:
+      - generic [ref=f1e72]:
+        - heading "What it keeps an eye on" [level=2] [ref=f1e75]
+        - paragraph [ref=f1e76]: Everything below is read from your own Torn account through the official API. Each part can be turned on or off.
+      - generic [ref=f1e77]:
+        - article [ref=f1e78]:
+          - heading "Travel and restocks" [level=3] [ref=f1e79]
+          - generic [ref=f1e80]:
+            - generic [ref=f1e81]:
+              - generic [ref=f1e82]: FLY WITHIN
+              - generic [ref=f1e83]: 1h 12m
+              - generic [ref=f1e84]: Japan · 3h 10m each way
+            - generic [ref=f1e85]:
+              - generic [ref=f1e86]: BUY MAX
+              - generic [ref=f1e87]: "29"
+              - generic [ref=f1e88]: cash $24.1m
+          - list [ref=f1e89]:
+            - listitem [ref=f1e90]: Works out whether a trip fits before your organized crime, and how long you have to leave.
+            - listitem [ref=f1e91]: The Fly button locks when the round trip no longer fits, so you do not miss the OC.
+            - listitem [ref=f1e92]: Shows your item's stock and price at your destination, and how many you can afford.
+            - listitem [ref=f1e93]: Learns how often the item restocks and tells you when the next one is due.
+            - listitem [ref=f1e94]: Alerts for ready to fly, landed, back in stock, leave soon, leave now, and staying abroad too long.
+        - article [ref=f1e95]:
+          - heading "OC and status" [level=3] [ref=f1e96]
+          - generic [ref=f1e97]:
+            - generic [ref=f1e98]: OC READY IN
+            - generic [ref=f1e99]: 2h 41m
+            - generic [ref=f1e100]: Colored by how much time you have
+          - list [ref=f1e101]:
+            - listitem [ref=f1e102]: OC countdown that turns yellow, then red.
+            - listitem [ref=f1e103]: Hospital and jail timers.
+            - listitem [ref=f1e104]: Your cash and your next step.
+        - article [ref=f1e105]:
+          - heading "Chains" [level=3] [ref=f1e106]
+          - generic [ref=f1e107]:
+            - generic [ref=f1e108]:
+              - generic [ref=f1e109]: CHAIN 23,929/25,000
+              - generic [ref=f1e110]: 01:30
+              - generic [ref=f1e111]: until it breaks
+            - generic [ref=f1e112]:
+              - generic [ref=f1e113]: MY CHAIN HITS
+              - generic [ref=f1e114]: "70"
+              - generic [ref=f1e115]: chain at 23,929
+            - generic [ref=f1e116]:
+              - generic [ref=f1e117]: MY CHAIN RESPECT
+              - generic [ref=f1e118]: "341.8"
+              - generic [ref=f1e119]: 70 hits
+            - generic [ref=f1e120]:
+              - generic [ref=f1e121]: LAST CHAIN RANK
+              - generic [ref=f1e122]: "#4"
+              - generic [ref=f1e123]: "of 98 · you: 40 hits · 120.5 resp"
+          - paragraph [ref=f1e124]: Your hits and respect come from your attack log. Rank comes from the faction's chain report once the chain ends. Needs faction access on your key.
+        - article [ref=f1e125]:
+          - heading "Targets" [level=3] [ref=f1e126]
+          - img "Sample target list with fair fight and stat estimates" [ref=f1e127]:
+            - generic [ref=f1e128]:
+              - generic [ref=f1e129]: Marcus_77 · L41
+              - generic [ref=f1e130]: FF 1.4
+              - generic [ref=f1e131]: ≥3k
+            - generic [ref=f1e132]:
+              - generic [ref=f1e133]: NightOwl · L55
+              - generic [ref=f1e134]: FF 1.9
+              - generic [ref=f1e135]: ≥140k
+            - generic [ref=f1e136]:
+              - generic [ref=f1e137]: Vex · L62
+              - generic [ref=f1e138]: FF 2.3
+              - generic [ref=f1e139]: ≥1.2m
+          - list [ref=f1e140]:
+            - listitem [ref=f1e141]: "Pulls from your in-game Targets list: offline, and not in hospital or travel."
+            - listitem [ref=f1e142]: Estimates their stats from the fair fights you have actually had. It shows a floor, never a made-up number.
+            - listitem [ref=f1e143]: FF Scouter works too, if you add your own key.
+        - article [ref=f1e144]:
+          - heading "Bars and cooldowns" [level=3] [ref=f1e145]
+          - generic [ref=f1e146]:
+            - generic [ref=f1e147]: ENERGY
+            - generic [ref=f1e148]: 120/150
+          - list [ref=f1e151]:
+            - listitem [ref=f1e152]: Energy, nerve and health.
+            - listitem [ref=f1e153]: Drug, booster and medical cooldowns, and a warning when one drops under 6 hours.
+            - listitem [ref=f1e154]: Xanax with your addiction penalty and counts.
+        - article [ref=f1e155]:
+          - heading "NPC attacks" [level=3] [ref=f1e156]
+          - generic [ref=f1e157]:
+            - generic [ref=f1e158]: NPC ATTACK IN
+            - generic [ref=f1e159]: 02:14:09
+            - generic [ref=f1e160]: Fernando, Tiny, Duke
+          - paragraph [ref=f1e161]: Attack times come from Loot Rangers. Get an alert 10 minutes before, and when it goes live, with who to hit first.
+        - article [ref=f1e162]:
+          - heading "25 alerts, your choice" [level=3] [ref=f1e163]
+          - paragraph [ref=f1e164]: Every alert is its own on and off switch. The busy ones, like full bars, start off.
+          - list [ref=f1e165]:
+            - listitem [ref=f1e166]: Travel, OC, hospital and jail
+            - listitem [ref=f1e167]: Bars and cooldowns
+            - listitem [ref=f1e168]: Chain, NPC attacks, medals and honors
+    - generic [ref=f1e170]:
+      - generic [ref=f1e171]:
+        - heading "Build your home screen" [level=2] [ref=f1e174]
+        - paragraph [ref=f1e175]: Seven widgets. The Dashboard builder has a tab for each part of the game, so you only turn on what you play.
+      - generic [ref=f1e176]:
+        - generic "Sample of the Dashboard builder" [ref=f1e177]:
+          - tablist [ref=f1e178]:
+            - tab "LAYOUT" [ref=f1e179] [cursor=pointer]
+            - tab "TRAVEL 2" [selected] [ref=f1e180] [cursor=pointer]
+            - tab "BARS 2" [ref=f1e181] [cursor=pointer]
+            - tab "COOLDOWNS 1" [ref=f1e182] [cursor=pointer]
+            - tab "OC 1" [ref=f1e183] [cursor=pointer]
+            - tab "FACTION 1" [ref=f1e184] [cursor=pointer]
+            - tab "LOOT 1" [ref=f1e185] [cursor=pointer]
+            - tab "STATUS 1" [ref=f1e186] [cursor=pointer]
+            - tab "SHORTCUTS 2" [ref=f1e187] [cursor=pointer]
+          - tabpanel [ref=f1e188]:
+            - generic [ref=f1e189]:
+              - generic [ref=f1e190]: Location and ETA
+              - button "ON" [pressed] [ref=f1e191]
+            - generic [ref=f1e192]:
+              - generic [ref=f1e193]: Trip
+              - button "ON" [pressed] [ref=f1e194]
+            - generic [ref=f1e195]:
+              - generic [ref=f1e196]: Stock of your item
+              - button "OFF" [ref=f1e197]
+            - generic [ref=f1e198]:
+              - generic [ref=f1e199]: Buy max
+              - button "OFF" [ref=f1e200]
+        - list [ref=f1e201]:
+          - listitem [ref=f1e202]:
+            - generic [ref=f1e203]: Single
+            - text: "One thing, big. Pick from more than 20: location, trip, stock, bars, cooldowns, chain hits, NPC attack and more."
+          - listitem [ref=f1e204]:
+            - generic [ref=f1e205]: Dashboard
+            - text: Your own mix of live tiles and buttons, in the order you choose.
+          - listitem [ref=f1e206]:
+            - generic [ref=f1e207]: Status
+            - text: The all-in-one view for your trip and your OC.
+          - listitem [ref=f1e208]:
+            - generic [ref=f1e209]: Trip and Stock
+            - text: A flight or a shop shelf at a glance.
+          - listitem [ref=f1e210]:
+            - generic [ref=f1e211]: Targets
+            - text: A scrolling attack list you can tap through.
+          - listitem [ref=f1e212]:
+            - generic [ref=f1e213]: Actions
+            - text: Buttons that open the right Torn page. Add four of your own.
+    - generic [ref=f1e215]:
+      - heading "The ground rules" [level=2] [ref=f1e219]
+      - generic [ref=f1e220]:
+        - generic [ref=f1e221]:
+          - heading "You tap everything" [level=3] [ref=f1e222]
+          - paragraph [ref=f1e223]: Wingman only reads your data. It never clicks, attacks or buys for you. Every button opens a Torn page and you do the real action.
+        - generic [ref=f1e224]:
+          - heading "A Limited key is enough" [level=3] [ref=f1e225]
+          - paragraph [ref=f1e226]: The app checks your key when you add it, tells you what works and what does not, and warns you if it has more access than Wingman needs.
+        - generic [ref=f1e227]:
+          - heading "Your data, your call" [level=3] [ref=f1e228]
+          - paragraph [ref=f1e229]: Keys are stored encrypted. Delete your account and your key, settings and devices go with it. Wingman is independent and has no link to Torn.
+    - generic [ref=f1e231]:
+      - generic [ref=f1e232]:
+        - heading "Join the Android test" [level=2] [ref=f1e234]
+        - paragraph [ref=f1e235]: Wingman is in testing on Android. Tell us the email you use with Google Play.
+        - list [ref=f1e236]:
+          - listitem [ref=f1e237]:
+            - generic [ref=f1e238]:
+              - generic [ref=f1e239]: Request access
+              - text: Send your Google Play email.
+          - listitem [ref=f1e240]:
+            - generic [ref=f1e241]:
+              - generic [ref=f1e242]: We add you
+              - text: You get an email with the download link and your invite code.
+          - listitem [ref=f1e243]:
+            - generic [ref=f1e244]:
+              - generic [ref=f1e245]: Add your key
+              - text: Create your account in the app and paste a Limited Torn API key.
+      - generic [ref=f1e246]:
+        - generic [ref=f1e247]: Email address
+        - textbox "Email address" [ref=f1e248]
+        - generic [ref=f1e249]: Website
+        - textbox [ref=f1e250]
+        - button "Request access" [ref=f1e251] [cursor=pointer]
+        - status [ref=f1e252]
+        - paragraph [ref=f1e253]:
+          - text: We use your address only to add you to the test and to contact you about it. See the
+          - link "privacy policy" [ref=f1e254] [cursor=pointer]:
+            - /url: /privacy
+          - text: .
+    - generic [ref=f1e256]:
+      - heading "Questions" [level=2] [ref=f1e260]
+      - group [ref=f1e261]:
+        - generic "Which Torn API key do I need? +" [ref=f1e262] [cursor=pointer]
+      - group [ref=f1e263]:
+        - generic "Does it play the game for me? +" [ref=f1e264] [cursor=pointer]
+      - group [ref=f1e265]:
+        - generic "Is there an iPhone version? +" [ref=f1e266] [cursor=pointer]
+      - group [ref=f1e267]:
+        - generic "What does it cost? +" [ref=f1e268] [cursor=pointer]
+      - group [ref=f1e269]:
+        - generic "Where does the data come from? +" [ref=f1e270] [cursor=pointer]
+      - group [ref=f1e271]:
+        - generic "How do I delete my account? +" [ref=f1e272] [cursor=pointer]
+  - contentinfo [ref=f1e273]:
+    - generic [ref=f1e274]:
+      - generic [ref=f1e275]:
+        - link "Wingman" [ref=f1e276] [cursor=pointer]:
+          - /url: /
+        - paragraph [ref=f1e277]: Wingman, powered by myGIGlife INC.
+      - generic [ref=f1e278]:
+        - text: 813 Oak St, Ste 10 - 1190Conway, AR 72032
+        - link "wingman@mygig.life" [ref=f1e279] [cursor=pointer]:
+          - /url: mailto:wingman@mygig.life
+      - generic [ref=f1e280]:
+        - paragraph [ref=f1e281]: Wingman is an independent tool. It is not made by, affiliated with, or endorsed by Torn.
+        - paragraph [ref=f1e282]:
+          - link "Privacy policy" [ref=f1e283] [cursor=pointer]:
+            - /url: /privacy
+          - text: ·
+          - link "Terms of use" [ref=f1e284] [cursor=pointer]:
+            - /url: /terms

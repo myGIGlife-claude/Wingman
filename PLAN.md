@@ -25,6 +25,7 @@ Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exi
 - [x] v1.18.0 NPC attack times from Loot Rangers (api.lzpt.io/loot, live data): tile in Single/Dashboard (Loot tab) and optional alerts. Credit shown in the tile; site privacy page must list lzpt.io.
 - [x] v1.18.1 chain tile shows your own hits and respect in the running chain (from your attack log). Live faction rank is NOT possible (faction/attacks returns error 7 for the owner key). v1.18.2: after a chain ends, chain tile shows LAST CHAIN rank from v2 faction/{id}/chainreport (attackers[].respect/attacks nested field names read defensively; re-run probe-shapes.mjs for the deeper shape).
 - [x] v1.18.4: separate Single/Dashboard options for My chain hits, My chain respect and Last chain rank (Faction section), next to Chain watch.
+- [x] v1.19.0: permanent release signing key (~/.config/wingman, backup script infra/backup-keystore.mjs, Jonathan to run), in-app updater (banner, download, install), backend GET /update and /update/apk (signed-in only, private bucket), infra/release.mjs.
 - [ ] Skipped, with reasons: YATA's own loot feed (April timestamps, stale); stock exchange benefit alerts (v1 user/stocks has only shares and transactions, no benefit-ready info); faction OC readiness (v2 faction/crimes returns error 7 for the owner key); inventory worth (v1 inventory selection is gone, v2 shape unknown); trains available, rental filter (no verified source)
 - [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
 
