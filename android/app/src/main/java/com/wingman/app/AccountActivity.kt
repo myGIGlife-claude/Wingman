@@ -46,26 +46,25 @@ class AccountActivity : Activity() {
         col.addView(txt("ACCOUNT", AMBER, 24f, true).apply { letterSpacing = 0.1f })
         status = txt("", DIM, 12f).apply { setPadding(0, dp(8), 0, 0) }; col.addView(status)
         report = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, 0) }
-        if (Prefs.get(this, "url").isEmpty() || Prefs.get(this, "secret").isEmpty()) signedOut() else { say("Loading…"); bg { loadMe() } }
+        if (Prefs.get(this, "secret").isEmpty()) signedOut() else { say("Loading…"); bg { loadMe() } }
     }
 
     // ---- Not signed in: invite code and Torn key ----
     private fun signedOut() {
         col.addView(txt("Create an account to use Wingman. You need an invite code and a Torn API key.", DIM, 13f).apply { setPadding(0, dp(6), 0, 0) })
         col.addView(txt("Which key? Make a Limited Access key in Torn (Settings, API Keys). Wingman only reads your data. Full access is not needed and is less safe.", AMBER, 12f).apply { setPadding(0, dp(8), 0, 0) })
-        val url = field("https://…run.app").apply { setText(Prefs.get(this@AccountActivity, "url").ifEmpty { DEFAULT_URL }) }
         val invite = field("invite code", true); val key = field("Torn API key (16 characters)", true)
-        label("Server"); col.addView(url); label("Invite code"); col.addView(invite); label("Torn API key"); col.addView(key)
+        label("Invite code"); col.addView(invite); label("Torn API key"); col.addView(key)
         col.addView(report)
         fun hdr() = mapOf("X-Invite-Code" to invite.text.toString().trim())
         fun body() = JSONObject().put("tornKey", key.text.toString().trim()).toString()
-        button("Check my key", false) { say("Checking…"); bg { val (c, t) = Api.send(this, "POST", "/keycheck", body(), hdr(), false, url.text.toString().trim()); showResult(c, t) } }
+        button("Check my key", false) { say("Checking…"); bg { val (c, t) = Api.send(this, "POST", "/keycheck", body(), hdr(), false); showResult(c, t) } }
         button("Create account", true) {
             say("Creating account…")
             bg {
-                val (c, t) = Api.send(this, "POST", "/signup", body(), hdr(), false, url.text.toString().trim())
+                val (c, t) = Api.send(this, "POST", "/signup", body(), hdr(), false)
                 if (c != 200) { say(errorOf(c, t), STOP); return@bg }
-                Prefs.put(this, "url", url.text.toString().trim()); Prefs.put(this, "secret", JSONObject(t).getString("token"))
+                Prefs.put(this, "secret", JSONObject(t).getString("token"))
                 FirebaseMessaging.getInstance().token.addOnSuccessListener { tk -> Prefs.put(this, "token", tk); bg { Api.register(this, tk); Api.refresh(this, true) } }
                 ui { draw() }
             }
@@ -123,5 +122,4 @@ class AccountActivity : Activity() {
         }
     }
 
-    companion object { const val DEFAULT_URL = "https://wingman-backend-6aw2bbejsa-ue.a.run.app" }
 }

@@ -7,7 +7,7 @@ import java.net.URL
 // Blocking calls to our own backend. Call from a background thread.
 object Api {
     fun call(c: Context, method: String, path: String, body: String? = null): String? {
-        val base = Prefs.get(c, "url").trimEnd('/')
+        val base = Prefs.url(c).trimEnd('/')
         val key = Prefs.get(c, "secret")
         if (base.isEmpty() || key.isEmpty()) return null
         return try {
@@ -27,7 +27,7 @@ object Api {
 
     // Like call, but returns the status code and body even for errors (0 when offline), can send extra headers, and can skip the key (sign-up).
     fun send(c: Context, method: String, path: String, body: String? = null, headers: Map<String, String> = emptyMap(), auth: Boolean = true, baseUrl: String? = null): Pair<Int, String> {
-        val base = (baseUrl ?: Prefs.get(c, "url")).trimEnd('/')
+        val base = (baseUrl ?: Prefs.url(c)).trimEnd('/')
         if (base.isEmpty()) return 0 to ""
         return try {
             val h = URL(base + path).openConnection() as HttpURLConnection

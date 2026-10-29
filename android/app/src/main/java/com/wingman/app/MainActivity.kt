@@ -72,6 +72,7 @@ class MainActivity : Activity() {
     private lateinit var shop: EditText; private lateinit var safety: EditText; private lateinit var cap: EditText; private lateinit var buf: EditText
     private lateinit var xanax: Ui.Pill; private lateinit var status: TextView
     private var connected = false
+    private var wasSignedIn = false
     private lateinit var updateBar: LinearLayout
     private val summaries = mutableListOf<Pair<TextView, () -> String>>()
 
@@ -131,7 +132,10 @@ class MainActivity : Activity() {
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(24)) }
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         top.addView(mono(TextView(this).apply { text = "WINGMAN"; letterSpacing = 0.2f }, 26f, amber, true), LinearLayout.LayoutParams(0, -2, 1f))
-        top.addView(mono(TextView(this).apply { text = "v" + BuildConfig.VERSION_NAME }, 12f, dim))
+        var taps = 0 // seven taps on the version number show or hide the advanced connection settings (owner use)
+        top.addView(mono(TextView(this).apply { text = "v" + BuildConfig.VERSION_NAME; setPadding(dp(12), dp(8), 0, dp(8)); setOnClickListener {
+            if (++taps == 7) { val on = Prefs.get(this@MainActivity, "advanced") != "1"; Prefs.put(this@MainActivity, "advanced", if (on) "1" else "0"); recreate() }
+        } }, 12f, dim))
         col.addView(top)
         col.addView(mono(TextView(this).apply { text = "Read-only Torn helper. You tap every action." }, 12f, dim))
         status = mono(TextView(this).apply { setPadding(0, dp(8), 0, 0) }, 12f, go); col.addView(status)
@@ -140,21 +144,22 @@ class MainActivity : Activity() {
         col.addView(updateBar)
 
         url = field("https://…run.app"); secret = field("app secret"); secret.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        url.setText(Prefs.get(this, "url")); secret.setText(Prefs.get(this, "secret"))
+        url.setText(Prefs.url(this)); secret.setText(Prefs.get(this, "secret"))
         dest = Picker(dests); method = Picker(methods); item = Picker(emptyList())
         dest.onPick = { bg { loadItems(dests[dest.index].first, ""); save() } }; item.onPick = { save() }
         tgAbove = field("0").apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_SIGNED }; tgOff = field("60", true); tgFF = field("2.0").apply { inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL }; ffOn = Ui.pill(this, false) { save() }
         shop = field("3", true); safety = field("10", true); cap = field("29", true); buf = field("90", true)
         xanax = Ui.pill(this, true) { }
 
-        val hasUrl = Prefs.get(this, "url").isNotEmpty()
-        section(col, "CONNECTION", { if (connected) "Connected" else if (hasUrl) "Connecting…" else "Not connected" }, !hasUrl) {
-            addView(label("Backend URL")); addView(url); addView(label("App secret")); addView(secret)
-            addView(button("Connect and load", true) { connect() })
-        }
-        section(col, "ACCOUNT", { if (Prefs.get(this, "secret").isEmpty()) "Not signed in" else "Torn key, sign-up and sign-out" }, false) {
+        val hasUrl = Prefs.get(this, "secret").isNotEmpty() // signed in (or the owner secret is set)
+        section(col, "ACCOUNT", { if (Prefs.get(this, "secret").isEmpty()) "Not signed in" else "Torn key, sign-up and sign-out" }, !hasUrl) {
             addView(mono(TextView(this@MainActivity).apply { text = "Sign up with an invite code, check what your Torn key can do, change it, or delete your account." }, 12f, dim))
             addView(button("Account and Torn key", true) { startActivity(Intent(this@MainActivity, AccountActivity::class.java)) })
+        }
+        // Advanced: point the app at another server or use the owner secret. Hidden from players; tap the version number seven times.
+        if (Prefs.get(this, "advanced") == "1") section(col, "ADVANCED CONNECTION", { if (connected) "Connected" else if (hasUrl) "Connecting…" else "Not connected" }, false) {
+            addView(label("Backend URL")); addView(url); addView(label("App secret")); addView(secret)
+            addView(button("Connect and load", true) { connect() })
         }
         section(col, "TRIP", { "${dest.shown.ifEmpty { "—" }} · ${if (item.key.isEmpty()) "no item" else item.key} · ${method.shown.substringBefore(" (")}" }, false) {
             addView(label("Destination")); addView(dest); addView(label("Item to buy")); addView(item); addView(label("Flight type")); addView(method)
@@ -197,6 +202,7 @@ class MainActivity : Activity() {
 
         setContentView(ScrollView(this).apply { setBackgroundColor(Color.parseColor("#0E0E0C")); addView(col); Ui.fitSystemBars(this) })
         Prefs.get(this, "crash").takeIf { it.isNotEmpty() }?.let { status.text = "LAST CRASH:\n$it"; Prefs.put(this, "crash", "") }
+        wasSignedIn = hasUrl
         if (hasUrl) { load(); checkUpdate() }
     }
 
@@ -238,11 +244,13 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onResume() { super.onResume(); if ((Prefs.get(this, "secret").isNotEmpty()) != wasSignedIn) recreate() }
+
     private fun bg(f: () -> Unit) = Thread { try { f() } catch (e: Throwable) { say("Error: " + e.toString()) } }.start()
     private fun say(t: String) = runOnUiThread { status.text = t }
 
     private fun connect() {
-        Prefs.put(this, "url", url.text.toString().trim()); Prefs.put(this, "secret", secret.text.toString().trim())
+        val u = url.text.toString().trim(); Prefs.put(this, "url", if (u == BuildConfig.DEFAULT_BACKEND) "" else u); Prefs.put(this, "secret", secret.text.toString().trim())
         say("Connecting…")
         FirebaseMessaging.getInstance().token.addOnSuccessListener { t -> Prefs.put(this, "token", t); bg { Api.register(this, t) } }
         load()

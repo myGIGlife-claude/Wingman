@@ -29,7 +29,7 @@ object Update {
 
     // Blocking. Saves the APK in the app's cache, checks its fingerprint, and returns the file (null if anything is off).
     fun download(c: Context, i: Info, progress: (Int) -> Unit): File? {
-        val base = Prefs.get(c, "url").trimEnd('/'); val key = Prefs.get(c, "secret")
+        val base = Prefs.url(c).trimEnd('/'); val key = Prefs.get(c, "secret")
         if (base.isEmpty() || key.isEmpty()) return null
         return try {
             val dir = File(c.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }

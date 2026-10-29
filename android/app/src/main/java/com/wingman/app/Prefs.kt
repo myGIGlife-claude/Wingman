@@ -7,4 +7,6 @@ object Prefs {
     private fun sp(c: Context) = c.getSharedPreferences("wingman", Context.MODE_PRIVATE)
     fun get(c: Context, k: String) = sp(c).getString(k, "") ?: ""
     fun put(c: Context, k: String, v: String) = sp(c).edit().putString(k, v).apply()
+    // The backend address: built in, unless the hidden advanced screen set another one.
+    fun url(c: Context) = get(c, "url").ifEmpty { BuildConfig.DEFAULT_BACKEND }
 }
