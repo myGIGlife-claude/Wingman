@@ -351,7 +351,7 @@ class WingmanWidget : AppWidgetProvider() {
 
         // One row of the attack list. Tapping it opens that player's attack page; you press Torn's own Attack button.
         // A widget narrower than this (a foldable's cover screen, or a small slot) gets the compact layout.
-        const val COMPACT_DP = 210
+        const val COMPACT_DP = 260
         // The narrowest width the launcher reports for this widget (the minimum, and every size on Android 12+), in dp. 250 when it reports nothing.
         fun widgetWidthDp(c: Context, id: Int): Int {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
