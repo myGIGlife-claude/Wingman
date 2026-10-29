@@ -110,3 +110,11 @@ export async function fetchAttacks(key: string): Promise<any[]> {
   const j = await get(`https://api.torn.com/v2/user/attacks?limit=100&sort=desc&key=${key}&comment=Wingman`);
   return Array.isArray(j.attacks) ? j.attacks : j.attacks && typeof j.attacks === 'object' ? Object.values(j.attacks) : [];
 }
+
+// The newest finished faction chain and its report. Throws when the key cannot read faction data.
+export async function fetchLastChain(key: string): Promise<{ id: number } | null> {
+  const j = await get(`https://api.torn.com/v2/faction/chains?limit=1&key=${key}&comment=Wingman`);
+  const id = Number(j.chains?.[0]?.id);
+  return Number.isFinite(id) && id > 0 ? { id } : null;
+}
+export const fetchChainReport = (key: string, id: number) => get(`https://api.torn.com/v2/faction/${id}/chainreport?key=${key}&comment=Wingman`);

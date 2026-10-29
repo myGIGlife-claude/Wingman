@@ -5,7 +5,7 @@ if (!/^[A-Za-z0-9]{16}$/.test(key ?? '')) { console.error('Set TORN_KEY to your 
 const shape = (v, d = 0) => {
   if (Array.isArray(v)) return v.length ? [shape(v[0], d + 1), `(${v.length} items)`] : [];
   if (v && typeof v === 'object') {
-    if (d >= 4) return '{…}';
+    if (d >= (globalThis.MAXD ?? 4)) return '{…}';
     const ks = Object.keys(v);
     // Objects keyed by id (all numeric keys) are shown once.
     if (ks.length > 3 && ks.every(k => /^\d+$/.test(k))) return { '<id>': shape(v[ks[0]], d + 1), '(count)': ks.length };
@@ -39,6 +39,7 @@ try {
   const id = (await r.json())?.chains?.[0]?.id;
   if (id) {
     const j = await (await fetch(`https://api.torn.com/v2/faction/${id}/chainreport?key=${key}&comment=WingmanProbe`, { signal: AbortSignal.timeout(15000) })).json();
+    globalThis.MAXD = 7;
     console.log(`\n== v2 faction chainreport (newest chain)\n${JSON.stringify(j.error ? { error: j.error.code } : shape(j), null, 1)}`);
   } else console.log('\n== v2 faction chainreport\nno finished chain found');
 } catch (e) { console.log(`\n== v2 faction chainreport\nfailed: ${e.message}`); }
