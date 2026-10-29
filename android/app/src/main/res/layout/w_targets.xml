@@ -7,7 +7,7 @@
 </LinearLayout>
 <TextView android:id="@+id/tgt_chip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="12sp" android:textColor="@color/amber" android:fontFamily="monospace" android:textStyle="bold" android:letterSpacing="0.06" android:includeFontPadding="false" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:background="@drawable/chip_amber"/>
 </LinearLayout>
-<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
+<LinearLayout android:id="@+id/tgt_status_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginBottom="10dp">
 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:layout_marginRight="12dp">
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="5dp">
 <TextView android:id="@+id/tgt_en_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="ENERGY" android:textSize="11sp" android:textColor="@color/dim" android:fontFamily="monospace" android:letterSpacing="0.06" android:includeFontPadding="false"/>

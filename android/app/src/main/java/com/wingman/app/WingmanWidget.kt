@@ -350,18 +350,22 @@ class WingmanWidget : AppWidgetProvider() {
         }
 
         // One row of the attack list. Tapping it opens that player's attack page; you press Torn's own Attack button.
-        fun targetRow(c: Context, t: JSONObject, now: Long): RemoteViews {
-            val v = RemoteViews(c.packageName, R.layout.s_target)
+        // A widget narrower than this (a foldable's cover screen, or a small slot) gets the compact layout.
+        const val COMPACT_DP = 210
+        fun widgetWidthDp(c: Context, id: Int): Int = AppWidgetManager.getInstance(c).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250)
+
+        fun targetRow(c: Context, t: JSONObject, now: Long, compact: Boolean = false): RemoteViews {
+            val v = RemoteViews(c.packageName, if (compact) R.layout.s_target_c else R.layout.s_target)
             v.setTextViewText(R.id.tg_name, t.optString("name"))
             val bs = t.optString("bs").takeIf { it.isNotEmpty() && it != "null" }
-            v.setTextViewText(R.id.tg_sub, "Lv ${t.optInt("level")}${if (bs != null) " · ~$bs" else ""} · offline ${Tiles.long(now - t.optLong("lastAction"))}")
+            v.setTextViewText(R.id.tg_sub, "Lv ${t.optInt("level")}${if (bs != null) " · ~$bs" else ""}${if (compact) "\n" else " · "}offline ${Tiles.long(now - t.optLong("lastAction"))}")
             // Difficulty badge from FF Scouter: green is easy, yellow is fair, red is hard.
             if (!t.isNull("ff")) {
                 val ff = t.optDouble("ff"); val k = if (ff <= 2.0) "go" else if (ff <= 2.6) "yellow" else "stop"
                 v.setViewVisibility(R.id.tg_ff, View.VISIBLE); v.setTextViewText(R.id.tg_ff, "FF\n%.1f".format(ff))
                 v.setTextColor(R.id.tg_ff, rgb(k)); v.setInt(R.id.tg_ff, "setBackgroundResource", chipBg(k))
             }
-            v.setTextViewText(R.id.tg_pill, "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go)
+            if (!compact) { v.setTextViewText(R.id.tg_pill, "● ATTACK"); v.setTextColor(R.id.tg_pill, GO); v.setInt(R.id.tg_pill, "setBackgroundResource", R.drawable.chip_go) }
             v.setOnClickFillInIntent(R.id.tg_row, Intent().putExtra("url", "https://www.torn.com/loader.php?sid=attack&user2ID=${t.optLong("id")}"))
             return v
         }
@@ -430,6 +434,7 @@ class WingmanWidget : AppWidgetProvider() {
         // The scrollable attack list widget.
         private fun buildTargets(c: Context, id: Int): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.w_targets)
+            val compact = widgetWidthDp(c, id) < COMPACT_DP
             val d = targetsData(c)
             val total = d?.optInt("total") ?: 0
             val err = d?.optString("error")?.takeIf { it.isNotEmpty() && it != "null" }
@@ -445,8 +450,12 @@ class WingmanWidget : AppWidgetProvider() {
                 v.setViewVisibility(R.id.tgt_hosp_t, View.VISIBLE); countdown(v, R.id.tgt_hosp_t, hu - now)
             } else { v.setInt(R.id.tgt_hosp_box, "setBackgroundResource", R.drawable.chip_go); v.setTextViewText(R.id.tgt_hosp, "● HOSPITAL · OK"); v.setTextColor(R.id.tgt_hosp, GO) }
             v.setTextViewText(R.id.tgt_label, "ATTACK LIST")
-            v.setTextViewText(R.id.tgt_count, if (d == null) "No data yet" else "$total can be hit")
-            v.setTextViewText(R.id.tgt_chip, if (d?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE")
+            v.setTextViewText(R.id.tgt_count, if (d == null) "No data yet" else if (compact) "$total targets" else "$total can be hit")
+            if (compact) { // narrow: keep the title, the list and the refresh button; drop the badges and the energy line
+                v.setViewVisibility(R.id.tgt_chip, View.GONE); v.setViewVisibility(R.id.tgt_status_row, View.GONE)
+                v.setTextViewTextSize(R.id.tgt_count, android.util.TypedValue.COMPLEX_UNIT_SP, 18f)
+            }
+            if (!compact) v.setTextViewText(R.id.tgt_chip, if (d?.optString("source") == "ff") "● FF SCOUTER" else "● OFFLINE")
             v.setRemoteAdapter(R.id.tgt_list, Intent(c, TargetsService::class.java).apply { putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id); data = android.net.Uri.parse(toUri(Intent.URI_INTENT_SCHEME)) })
             v.setPendingIntentTemplate(R.id.tgt_list, PendingIntent.getActivity(c, 60, Intent(c, OpenActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE))
             v.setEmptyView(R.id.tgt_list, R.id.tgt_empty)

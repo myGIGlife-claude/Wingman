@@ -9,6 +9,7 @@ abstract class KindWidget(private val kind: String) : AppWidgetProvider() {
     // Resizing can switch a widget between its row and column layouts.
     override fun onAppWidgetOptionsChanged(c: Context, m: AppWidgetManager, id: Int, options: android.os.Bundle) {
         m.updateAppWidget(id, WingmanWidget.build(c, kind, id))
+        if (kind == "targets") m.notifyAppWidgetViewDataChanged(id, R.id.tgt_list) // rows pick compact or full layout by width
     }
 
     override fun onUpdate(c: Context, m: AppWidgetManager, ids: IntArray) {
