@@ -167,7 +167,7 @@ export function buildApp(S: AppSecrets, logger = true) {
   app.get('/update/apk', async (req, reply) => {
     const r = await getRelease();
     if (!r) return reply.code(404).send({ error: 'no release published' });
-    const file = getStorage().bucket(`${getApp().options.projectId}-releases`).file(r.object);
+    const file = getStorage().bucket(r.bucket || `${getApp().options.projectId}-releases`).file(r.object); // the release script records the real bucket name
     reply.header('content-type', 'application/vnd.android.package-archive').header('content-length', r.size).header('x-sha256', r.sha).header('cache-control', 'private, no-store');
     return reply.send(file.createReadStream());
   });

@@ -20,5 +20,5 @@ console.log('upload', u, u >= 300 ? JSON.stringify(uj).slice(0, 200) : `${bytes.
 if (u >= 300) process.exit(1);
 
 const f = (v) => typeof v === 'number' ? { integerValue: String(v) } : { stringValue: v };
-const [d, dj] = await g('PATCH', `https://firestore.googleapis.com/v1/projects/${P}/databases/(default)/documents/shared/release`, { fields: { code: f(Number(code)), name: f(name), size: f(bytes.length), sha: f(sha), object: f(object), notes: f(notes) } });
+const [d, dj] = await g('PATCH', `https://firestore.googleapis.com/v1/projects/${P}/databases/(default)/documents/shared/release`, { fields: { code: f(Number(code)), name: f(name), size: f(bytes.length), sha: f(sha), object: f(object), bucket: f(bucket), notes: f(notes) } });
 console.log('release doc', d, d >= 300 ? JSON.stringify(dj).slice(0, 200) : `v${name} (${code}) sha ${sha.slice(0, 12)}…`);
