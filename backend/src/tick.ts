@@ -13,6 +13,7 @@ import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { estimate } from './restock.ts';
 import { myScore, observedFF, rowFor } from './ffestimate.ts';
 import { chainHits } from './chainstats.ts';
+import { runProbe } from './diag.ts';
 import { rankInReport } from './chainrank.ts';
 
 const SENT_TTL = 3 * 86400;
@@ -106,6 +107,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     throw e;
   }
   const t: number = user.timestamp ?? wall; // server time corrects clock offset
+  if (uid === 'owner' && !st.probeAt) { st.probeAt = t; await runProbe(key).catch(() => {}); } // once: logs the shape of new Torn replies for the developer
 
   // Stock reports and restock history are shared by all players and fetched once a minute for the whole server.
   st.yata = await timed('yata', sharedYata(t));
