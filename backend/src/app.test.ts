@@ -65,3 +65,11 @@ test('updates are only for signed-in players', async () => {
   assert.equal((await a.inject({ method: 'GET', url: '/update/apk' })).statusCode, 401);
   assert.equal((await a.inject({ method: 'GET', url: '/update/apk', headers: { 'x-wingman-key': 'wrong' } })).statusCode, 401);
 });
+
+test('FF key check needs a signed-in player and reports a missing key plainly', async () => {
+  const a = buildApp({ ...base, encSecret: 'enc' }, false);
+  assert.equal((await a.inject({ method: 'POST', url: '/ffcheck', payload: {} })).statusCode, 401);
+  const r = await a.inject({ method: 'POST', url: '/ffcheck', headers: { 'x-wingman-key': 'app-secret' }, payload: {} });
+  assert.equal(r.statusCode, 200);
+  assert.equal(r.json().ok, false); assert.equal(r.json().reason, 'none'); assert.match(r.json().message, /ffscouter\.com/);
+});

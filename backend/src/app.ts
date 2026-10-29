@@ -11,6 +11,7 @@ import { checkKey } from './keycheck.ts';
 import { getApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { sharedYata } from './shared.ts';
+import { fetchFFTargets, FFError } from './ff.ts';
 
 const same = (a: unknown, b: string) => {
   const x = Buffer.from(String(a ?? '')), y = Buffer.from(b);
@@ -110,6 +111,24 @@ export function buildApp(S: AppSecrets, logger = true) {
     const id = c?.uid ?? req.ip, now = Date.now(), t = checkTries.get(id);
     if (!t || t.reset < now) checkTries.set(id, { n: 1, reset: now + 60_000 }); else if (++t.n > 6) return reply.code(429).send({ error: 'too many checks, wait a minute' });
     return checkKey(key);
+  });
+
+  // Does an FF Scouter key work, and does it return data? Checks the typed key, or the one already stored (the owner's is on the server). Never echoes a key.
+  const ffTries = new Map<string, { n: number; reset: number }>();
+  app.post('/ffcheck', async (req, reply) => {
+    const c = ctxOf(req), b: any = req.body ?? {}, typed = typeof b.ffKey === 'string' ? b.ffKey.trim() : '';
+    const now = Date.now(), t = ffTries.get(c.uid);
+    if (!t || t.reset < now) ffTries.set(c.uid, { n: 1, reset: now + 60_000 }); else if (++t.n > 6) return reply.code(429).send({ error: 'too many checks, wait a minute' });
+    const key = typed || c.ffKey;
+    if (!key) return { ok: false, reason: 'none', message: 'No FF Scouter key yet. Register at ffscouter.com, then paste your key here.' };
+    try {
+      const rows = await fetchFFTargets(key, { maxff: 3, limit: 5 });
+      return rows.length ? { ok: true, reason: 'ok', message: `The key works and FF Scouter returned data (${rows.length} players).` }
+        : { ok: true, reason: 'empty', message: 'The key works, but FF Scouter returned no players right now.' };
+    } catch (e: any) {
+      if (e instanceof FFError) return { ok: false, reason: e.code === 6 ? 'unregistered' : 'error', message: e.code === 6 ? 'FF Scouter does not know this key. Register your key at ffscouter.com first.' : `FF Scouter said: ${e.message}` };
+      return { ok: false, reason: 'unreachable', message: 'Could not reach FF Scouter. Try again in a minute.' };
+    }
   });
 
   // Replace the stored Torn key. It must belong to the same player, and pass the core checks.

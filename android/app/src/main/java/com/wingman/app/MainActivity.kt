@@ -74,6 +74,7 @@ class MainActivity : Activity() {
     private var connected = false
     private var wasSignedIn = false
     private lateinit var updateBar: LinearLayout
+    private lateinit var ffKey: EditText; private lateinit var ffMsg: TextView; private lateinit var ffLink: TextView
     private val summaries = mutableListOf<Pair<TextView, () -> String>>()
 
     private fun mono(t: TextView, size: Float, color: Int, bold: Boolean = false) = t.apply {
@@ -173,10 +174,18 @@ class MainActivity : Activity() {
                 addView(mono(TextView(this@MainActivity).apply { text = "Xanax step when the drug cooldown is up" }, 14f, paper), LinearLayout.LayoutParams(0, -2, 1f))
                 addView(xanax)
             })
-            addView(button("Save settings", true) { save() })
+            addView(saveButton())
         }
         section(col, "ALERTS", { "${alertDefs.count { alertState[it.key] ?: it.on }} of ${alertDefs.size} on" }, false) { alertsBody = this; buildAlerts(this) }
+        ffKey = field("FF Scouter key").apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
+        ffMsg = mono(TextView(this).apply { setPadding(0, dp(8), 0, 0) }, 12f, dim)
+        ffLink = mono(TextView(this).apply { text = "Register your key at ffscouter.com  ›"; setPadding(0, dp(8), 0, 0); visibility = View.GONE
+            setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://ffscouter.com"))) } }, 13f, amber, true)
         section(col, "TARGETS", { if (ffOn.on) "FF Scouter · FF ≤ ${tgFF.text} · offline ≥ ${tgOff.text}m" else "level ≤ mine ${tgAbove.text.toString().toIntOrNull()?.let { if (it >= 0) "+$it" else "$it" } ?: "+0"} · offline ≥ ${tgOff.text}m" }, false) {
+            addView(label("FF Scouter key"))
+            addView(ffKey)
+            addView(button("Check and save key", true) { checkFF() })
+            addView(ffMsg); addView(ffLink)
             addView(mono(TextView(this@MainActivity).apply { text = "The attack widget lists players from your in-game Target list that are offline and not too strong. Other players' stats are private, so strength is judged by level." }, 12f, dim))
             addView(LinearLayout(this@MainActivity).apply {
                 orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(0, dp(14), 0, 0)
@@ -187,7 +196,7 @@ class MainActivity : Activity() {
             addView(label("Difficulty to show (fair fight 1.0 to 3.0; lower means weaker targets)")); addView(tgFF)
             addView(label("Without FF Scouter: highest level vs yours (0 = your level or lower)")); addView(tgAbove)
             addView(label("Offline for at least (minutes)")); addView(tgOff)
-            addView(button("Save settings", true) { save() })
+            addView(saveButton())
         }
         section(col, "WIDGET", { "Choose what the widget shows" }, false) {
             addView(button("All-in-one widget layout", false) { startActivity(Intent(this@MainActivity, LayoutActivity::class.java)) })
@@ -290,14 +299,48 @@ class MainActivity : Activity() {
         runOnUiThread { item.setList(if (rows.isEmpty() && want.isNotEmpty()) listOf(want to want) else rows, want) }
     }
 
-    private fun save() = bg {
+    // A save button that says what happened: "Saving…", then "Saved ✓", or a retry prompt.
+    private fun saveButton(): TextView {
+        lateinit var b: TextView
+        b = button("Save settings", true) {
+            b.isEnabled = false; b.text = "SAVING…"
+            save { ok ->
+                runOnUiThread {
+                    b.isEnabled = true; b.text = if (ok) "SAVED ✓" else "SAVE FAILED, TAP TO RETRY"
+                    Toast.makeText(this, if (ok) "Settings saved" else "Could not save. Check your connection.", Toast.LENGTH_SHORT).show()
+                    b.postDelayed({ b.text = "SAVE SETTINGS" }, 2500)
+                }
+            }
+        }
+        return b
+    }
+
+    // Asks the server whether the FF Scouter key works and returns data. A good typed key is saved to your account; a bad one shows why, with the register link.
+    private fun checkFF() = bg {
+        val typed = ffKey.text.toString().trim()
+        runOnUiThread { ffMsg.setTextColor(dim); ffMsg.text = "Checking…"; ffLink.visibility = View.GONE }
+        val (code, body) = Api.send(this, "POST", "/ffcheck", JSONObject().put("ffKey", typed).toString())
+        val r = try { JSONObject(body) } catch (e: Exception) { null }
+        if (code != 200 || r == null) { runOnUiThread { ffMsg.setTextColor(Color.parseColor("#FF5F3C")); ffMsg.text = if (code == 0) "No connection to the server." else r?.optString("error") ?: "Could not check the key (error $code)." }; return@bg }
+        val ok = r.optBoolean("ok"); var msg = r.optString("message")
+        if (ok && typed.isNotEmpty()) {
+            val (c2, b2) = Api.send(this, "PUT", "/account", JSONObject().put("ffKey", typed).toString())
+            msg += if (c2 == 200) " Saved." else if (c2 == 400 && b2.contains("owner")) "" else " The key works but could not be saved (error $c2)."
+        }
+        val reason = r.optString("reason")
+        runOnUiThread { ffMsg.setTextColor(if (ok) Color.parseColor("#B5E35C") else Color.parseColor("#FF5F3C")); ffMsg.text = msg; ffLink.visibility = if (!ok && (reason == "none" || reason == "unregistered")) View.VISIBLE else View.GONE }
+    }
+
+    private fun save(done: (Boolean) -> Unit = {}) = bg {
         val alerts = JSONObject().also { o -> alertDefs.forEach { d -> alertState[d.key]?.let { o.put(d.key, it) } } }
         val j = JSONObject().put("dest", dests[dest.index].first).put("method", methods[method.index].first)
             .put("item", item.key).put("shopMin", shop.text.toString().toIntOrNull() ?: 3)
             .put("safetyMin", safety.text.toString().toIntOrNull() ?: 10).put("capacity", cap.text.toString().toIntOrNull() ?: 29).put("flyBufferMin", buf.text.toString().toIntOrNull() ?: 90).put("targetMaxLevelAbove", tgAbove.text.toString().toIntOrNull() ?: 0).put("targetMinOfflineMin", tgOff.text.toString().toIntOrNull() ?: 60).put("ffMaxFF", tgFF.text.toString().toDoubleOrNull() ?: 2.0).put("ffEnabled", ffOn.on)
             .put("xanax", xanax.on).put("alerts", alerts).put("tz", java.util.TimeZone.getDefault().id)
-        say(if (Api.call(this, "PUT", "/settings", j.toString()) != null) "Saved." else "Save failed.")
-        Api.refresh(this)
+        val ok = Api.call(this, "PUT", "/settings", j.toString()) != null
+        say(if (ok) "Saved." else "Save failed.")
+        done(ok)
+        if (ok) Api.refresh(this)
     }
 
     private fun localTest() {
