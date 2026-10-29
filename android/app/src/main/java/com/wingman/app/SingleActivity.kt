@@ -29,7 +29,7 @@ class SingleActivity : Activity() {
             "BARS" to listOf(Item("energy", "Energy", "number and bar"), Item("nerve", "Nerve", "number and bar"), Item("life", "Health", "number and bar")),
             "COOLDOWNS" to listOf(Item("xanax", "Xanax cooldown", "with addiction and counts"), Item("drug", "Drug cooldown", ""), Item("booster", "Booster cooldown", ""),
                 Item("medical", "Medical cooldown", ""), Item("addiction", "Addiction watch", "penalty and rehabs")),
-            "FACTION" to listOf(Item("chain", "Chain watch", "chain count and time before it breaks"), Item("chainme", "Your chain hits", "your hits and respect in the running chain"), Item("chainlast", "Last chain rank", "your rank among the faction in the last finished chain")),
+            "FACTION" to listOf(Item("chain", "Chain watch", "chain count and time before it breaks"), Item("chainhits", "My chain hits", "how many hits you have landed in the running chain"), Item("chainresp", "My chain respect", "the respect you have earned in the running chain"), Item("chainlast", "Last chain rank", "your rank among the faction in the last finished chain")),
             "LOOT" to listOf(Item("npc", "NPC attack time", "when the next NPC attack starts (from Loot Rangers)")),
             "OC AND STATUS" to listOf(Item("oc", "OC countdown", "colored by how long you have"), Item("hospital", "Hospital status", "countdown if you are in"), Item("jail", "Jail status", "countdown if you are in"),
                 Item("cash", "Cash", ""), Item("next", "Next step", "Xanax, gym, crimes or fly"), Item("targets", "Targets", "how many players match your filters")),

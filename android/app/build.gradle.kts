@@ -11,8 +11,8 @@ android {
         applicationId = "com.wingman.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 37
-        versionName = "1.18.3"
+        versionCode = 38
+        versionName = "1.18.4"
     }
 }
 
