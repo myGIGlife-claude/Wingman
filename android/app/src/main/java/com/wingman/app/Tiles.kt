@@ -167,7 +167,7 @@ object Tiles {
                 c.optBoolean("noAccess") -> Tile("CHAIN", "—", sub = "needs faction access on your key", color = DIM)
                 cur <= 0 || end == null -> Tile("CHAIN", "NONE", sub = "no active chain", color = DIM)
                 end <= now -> Tile("CHAIN $cur", "ENDED", sub = "chain broke", color = STOP)
-                else -> Tile(if (max > 0) "CHAIN $cur/$max" else "CHAIN $cur", timerTo = end, sub = "until it breaks", color = if (end - now < 60) STOP else if (end - now < 180) YELLOW else GO)
+                else -> Tile(if (max > 0) "CHAIN $cur/$max" else "CHAIN $cur", timerTo = end, sub = if (c.has("myHits") && !c.isNull("myHits")) "you: ${c.optInt("myHits")} hits · ${"%.1f".format(c.optDouble("myRespect", 0.0))} resp" else "until it breaks", color = if (end - now < 60) STOP else if (end - now < 180) YELLOW else GO)
             }
         }
         "targets" -> {

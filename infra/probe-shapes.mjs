@@ -22,6 +22,8 @@ const urls = {
   'v1 stocks': `https://api.torn.com/user/?selections=stocks`,
   'v2 faction crimes': `https://api.torn.com/v2/faction/crimes?limit=2`,
   'v1 inventory': `https://api.torn.com/user/?selections=inventory`,
+  'v2 faction/attacks (chain rank)': `https://api.torn.com/v2/faction/attacks?limit=3`,
+  'v2 faction/chains': `https://api.torn.com/v2/faction/chains?limit=2`,
 };
 for (const [name, u] of Object.entries(urls)) {
   try {
@@ -30,3 +32,13 @@ for (const [name, u] of Object.entries(urls)) {
     console.log(`\n== ${name}\n${JSON.stringify(j.error ? { error: j.error.code } : shape(j), null, 1)}`);
   } catch (e) { console.log(`\n== ${name}\nfailed: ${e.message}`); }
 }
+
+// Per-member chain contribution comes from a chain report; try the newest finished chain.
+try {
+  const r = await fetch(`https://api.torn.com/v2/faction/chains?limit=1&key=${key}&comment=WingmanProbe`, { signal: AbortSignal.timeout(15000) });
+  const id = (await r.json())?.chains?.[0]?.id;
+  if (id) {
+    const j = await (await fetch(`https://api.torn.com/v2/faction/${id}/chainreport?key=${key}&comment=WingmanProbe`, { signal: AbortSignal.timeout(15000) })).json();
+    console.log(`\n== v2 faction chainreport (newest chain)\n${JSON.stringify(j.error ? { error: j.error.code } : shape(j), null, 1)}`);
+  } else console.log('\n== v2 faction chainreport\nno finished chain found');
+} catch (e) { console.log(`\n== v2 faction chainreport\nfailed: ${e.message}`); }

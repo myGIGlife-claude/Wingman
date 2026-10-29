@@ -12,6 +12,7 @@ import { push } from './fcm.ts';
 import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { estimate } from './restock.ts';
 import { myScore, observedFF, rowFor } from './ffestimate.ts';
+import { chainHits } from './chainstats.ts';
 
 const SENT_TTL = 3 * 86400;
 
@@ -159,6 +160,10 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     try {
       const c = await timed('chain', fetchChain(key, t));
       st.chain = { at: t, current: c?.current ?? 0, max: c?.max ?? 0, endAt: c ? Math.round((t + c.left) / 5) * 5 : null }; // rounded so the widget is not re-sent for a second of drift
+      // While a chain runs, count your own hits and respect in it (one more call per refresh).
+      if (c && c.start > 0) {
+        try { const h = chainHits(await timed('chain_hits', fetchAttacks(key)), Number(user.player_id), c.start); st.chain.myHits = h.hits; st.chain.myRespect = h.respect; } catch { /* no hit count this round */ }
+      }
     } catch (e: any) { if (!isRateLimit(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } }
   }
   const chain = st.chain?.current > 0 && st.chain.endAt ? { current: st.chain.current, left: st.chain.endAt - t } : null;

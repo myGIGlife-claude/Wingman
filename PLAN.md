@@ -23,6 +23,7 @@ Multi-user backend is deployed (invite-only, closed until INVITE_CODE secret exi
 - [ ] Web deletion link for Google Play (a page on the site that explains how to delete an account)
 - [x] Own FF estimate from your attack history (ffestimate.ts): target rows show the FF you last got and a stats floor. Verified against the real API 2026-10-28 (probe-shapes.mjs): attacks (modifiers.fair_fight), battlestats (+total), key info (access_level), faction chain, medals/honors arrays.
 - [x] v1.18.0 NPC attack times from Loot Rangers (api.lzpt.io/loot, live data): tile in Single/Dashboard (Loot tab) and optional alerts. Credit shown in the tile; site privacy page must list lzpt.io.
+- [x] v1.18.1 chain tile shows your own hits and respect in the running chain (from your attack log). Faction rank: needs faction/attacks or chainreport; run infra/probe-shapes.mjs to see if the owner key can read them.
 - [ ] Skipped, with reasons: YATA's own loot feed (April timestamps, stale); stock exchange benefit alerts (v1 user/stocks has only shares and transactions, no benefit-ready info); faction OC readiness (v2 faction/crimes returns error 7 for the owner key); inventory worth (v1 inventory selection is gone, v2 shape unknown); trains available, rental filter (no verified source)
 - [ ] Cloudflare Workers port (optional, only if GCP billing is a problem)
 

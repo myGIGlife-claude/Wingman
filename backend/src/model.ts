@@ -17,7 +17,7 @@ export interface Widget {
 // Slow-changing numbers fetched every few minutes: addiction penalty and Xanax / overdose counts.
 export interface Extra { at?: number; addiction?: number | null; addictionLabel?: string | null; rehabs?: number | null; xanTaken?: number | null; overdoses?: number | null; chain?: ChainFact | null; npc?: LootFact | null }
 // The faction chain as last seen. endAt is when it breaks (epoch seconds); noAccess means the key cannot read faction data.
-export interface ChainFact { current: number; max: number; endAt: number | null; noAccess?: boolean }
+export interface ChainFact { current: number; max: number; endAt: number | null; noAccess?: boolean; myHits?: number | null; myRespect?: number | null }
 
 export interface Facts {
   phase: string; origin: string | null; name: string | null; faction: string | null; life: Bar | null; hospitalUntil: number | null; jailUntil: number | null;
