@@ -3,6 +3,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { fetchYata, type YataSnapshot } from './yata.ts';
 import { observe, type Hist } from './restock.ts';
 import { fetchLoot, type LootFact } from './loot.ts';
+import { get } from './torn.ts';
+import { parsePrices } from './more.ts';
 
 // Stock reports and restock history are the same for every player, so they are fetched and stored once, not per user.
 const db = getFirestore();
@@ -68,3 +70,33 @@ export async function sharedLoot(now: number): Promise<LootFact | null> {
   if (!lootAt && lootInflight) await Promise.race([lootInflight, new Promise(r => setTimeout(r, 1500))]);
   return loot;
 }
+
+// A process-wide cache for data that is the same for every player: refreshed in the background, a failure keeps the last copy and waits a minute.
+function sharedCache<T>(ttl: number, load: () => Promise<T>) {
+  let val: T | null = null, at = 0, failed = 0, inflight: Promise<void> | null = null;
+  return async (now: number): Promise<T | null> => {
+    if (now - at >= ttl && now - failed >= 60 && !inflight) {
+      inflight = (async () => { try { val = await load(); at = now; } catch { failed = now; } finally { inflight = null; } })();
+    }
+    if (!at && inflight) await Promise.race([inflight, new Promise(r => setTimeout(r, 1500))]);
+    return val;
+  };
+}
+const API = 'https://api.torn.com';
+export const sharedGyms = sharedCache(86400, () => get(`${API}/torn/?selections=gyms&comment=Wingman&key=${process.env.TORN_API_KEY}`));
+export const sharedBounties = sharedCache(300, () => get(`${API}/v2/torn/bounties?limit=100&comment=Wingman&key=${process.env.TORN_API_KEY}`));
+
+// Stock prices every 30 minutes, with a week of history kept in the database for the dip alert.
+const stockHistDoc = () => db.doc('shared/stockhist');
+let stockHist: Record<string, [number, number][]> | null = null;
+export async function getStockHist(): Promise<Record<string, [number, number][]>> {
+  if (!stockHist) stockHist = ((await stockHistDoc().get()).data() as any) ?? {};
+  return stockHist!;
+}
+export const sharedStocks = sharedCache(1800, async () => {
+  const j = await get(`${API}/torn/?selections=stocks&comment=Wingman&key=${process.env.TORN_API_KEY}`);
+  const now = Math.floor(Date.now() / 1000), h = await getStockHist();
+  for (const [id, p] of Object.entries(parsePrices(j))) h[id] = [...(h[id] ?? []), [now, p.price] as [number, number]].slice(-336); // a week at 30-minute steps
+  await stockHistDoc().set(h).catch(e => console.error('stock history save failed', e?.message));
+  return j;
+});

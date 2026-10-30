@@ -13,7 +13,8 @@ import { nextBought, pruneSent, sameState, slimForPush } from './logic.ts';
 import { estimate } from './restock.ts';
 import { myScore, observedFF, rowFor } from './ffestimate.ts';
 import { chainHits } from './chainstats.ts';
-import { runProbe } from './diag.ts';
+import { runProbe, runProbe2 } from './diag.ts';
+import { refreshMore } from './moretick.ts';
 import { rankInReport } from './chainrank.ts';
 
 const SENT_TTL = 3 * 86400;
@@ -107,7 +108,8 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     throw e;
   }
   const t: number = user.timestamp ?? wall; // server time corrects clock offset
-  if (uid === 'owner' && !st.probeAt) { st.probeAt = t; await runProbe(key).catch(() => {}); } // once: logs the shape of new Torn replies for the developer
+  if (uid === 'owner' && !st.probeAt) { st.probeAt = t; await runProbe(key).catch(() => {}); }
+  if (uid === 'owner' && !st.probe2At) { st.probe2At = t; await runProbe2(key).catch(() => {}); } // once: logs the shape of new Torn replies for the developer
 
   // Stock reports and restock history are shared by all players and fetched once a minute for the whole server.
   st.yata = await timed('yata', sharedYata(t));
@@ -182,9 +184,12 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     } catch { st.chainRep = { ...(st.chainRep ?? {}), checkedAt: t }; }
   }
   const chain = st.chain?.current > 0 && st.chain.endAt ? { current: st.chain.current, left: st.chain.endAt - t } : null;
-  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t), ...npcEvents(st.npcState, npc, t)].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
+  // The newer tiles (events, education, refills, casino, trains, war, net worth, bounties, stocks).
+  const moreRes = await timed('more', refreshMore(key, st, t, user, typeof user.energy?.current === 'number' ? user.energy.current : null)).catch(() => ({ more: {}, events: [] as Evt[] }));
+  st.moreView = moreRes.more; // what /state serves between ticks
+  const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t), ...npcEvents(st.npcState, npc, t), ...moreRes.events].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 
-  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain ? { ...st.chain, last: st.chainRep?.id ? st.chainRep : null } : null, npc });
+  const model = widgetModel(p, cfg, bought, user, rs, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null, tg, { ...st.extra, chain: st.chain ? { ...st.chain, last: st.chainRep?.id ? st.chainRep : null } : null, npc, more: moreRes.more });
   const changed = JSON.stringify({ ...model, updatedAt: 0 }) !== JSON.stringify({ ...st.model, updatedAt: 0 });
   if (changed || events.length) {
     try { await timed('push', push(uid, slimForPush(model), events)); } catch (e) {
@@ -219,5 +224,5 @@ export async function currentModel({ uid, key, ffKey }: Ctx, fresh = false): Pro
   const p = plan(user, oc, cfg, st, user.timestamp);
   const hk = cfg.item ? `${p.phase === 'abroad' ? p.here.id : cfg.dest}:${cfg.item.toLowerCase()}` : null;
   return widgetModel(p, cfg, !!st.bought, user, hk ? estimate(hist[hk], user.timestamp) : undefined, p.phase === 'traveling' ? (p.outbound ? 'Torn' : st.lastPlace ?? null) : null,
-    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), { ...st.extra, chain: st.chain ? { ...st.chain, last: st.chainRep?.id ? st.chainRep : null } : null, npc: (await sharedLoot(user.timestamp)) });
+    targetsView(cfg, st, user.level ?? 0, user.timestamp, ffKey), { ...st.extra, chain: st.chain ? { ...st.chain, last: st.chainRep?.id ? st.chainRep : null } : null, npc: (await sharedLoot(user.timestamp)), more: st.moreView });
 }

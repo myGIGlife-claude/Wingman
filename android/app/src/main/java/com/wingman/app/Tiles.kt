@@ -31,16 +31,19 @@ object Tiles {
     val DASH = listOf(
         DashDef("oc", "OC countdown", false), DashDef("location", "Location: in Torn, abroad or flying, with ETA", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
         DashDef("xanax", "Xanax: cooldown, addiction, counts", false), DashDef("addiction", "Addiction watch: penalty and rehabs", false), DashDef("booster", "Booster cooldown", false), DashDef("medical", "Medical cooldown", false),
-        DashDef("chain", "Chain watch: count and time left", false), DashDef("chainhits", "My hits in the running chain", false), DashDef("chainresp", "My respect in the running chain", false), DashDef("chainlast", "Your rank in the last chain", false), DashDef("npc", "NPC attack time (Loot Rangers)", false), DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
+        DashDef("chain", "Chain watch: count and time left", false), DashDef("chainhits", "My hits in the running chain", false), DashDef("chainresp", "My respect in the running chain", false), DashDef("chainlast", "Your rank in the last chain", false), DashDef("npc", "NPC attack time (Loot Rangers)", false),
+        DashDef("events", "Last event: attacks, trades, messages", false), DashDef("education", "Education: time left", false), DashDef("refills", "Free refills left", false), DashDef("casino", "Casino tokens and streak", false),
+        DashDef("trains", "Trains your energy buys", false), DashDef("war", "Ranked war: score and time", false),
+        DashDef("networth", "Net worth and change today", false), DashDef("bounty", "Top bounty in your range", false), DashDef("stocks", "Stock portfolio and dips", false), DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
         DashDef("gym", "Gym button", true), DashDef("fly", "Fly button (locks near your OC)", true), DashDef("crimes", "Crimes button", true),
         DashDef("items", "Items button", true), DashDef("spin", "Spin the wheel button", true),
         DashDef("c1", "Custom shortcut 1", true), DashDef("c2", "Custom shortcut 2", true), DashDef("c3", "Custom shortcut 3", true), DashDef("c4", "Custom shortcut 4", true),
     )
     // Sections of the Dashboard builder, in tab order. Every DASH id belongs to one; shortcut buttons are all in "Shortcuts".
-    val GROUPS = listOf("Travel", "Bars", "Cooldowns", "OC", "Faction", "Loot", "Status", "Shortcuts")
+    val GROUPS = listOf("Travel", "Bars", "Cooldowns", "OC", "Faction", "Loot", "Daily", "Money", "Status", "Shortcuts")
     private val GROUP_OF = mapOf("location" to "Travel", "energy" to "Bars", "nerve" to "Bars", "life" to "Bars",
         "xanax" to "Cooldowns", "addiction" to "Cooldowns", "booster" to "Cooldowns", "medical" to "Cooldowns",
-        "oc" to "OC", "chain" to "Faction", "chainhits" to "Faction", "chainresp" to "Faction", "chainlast" to "Faction", "npc" to "Loot", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
+        "oc" to "OC", "chain" to "Faction", "chainhits" to "Faction", "chainresp" to "Faction", "chainlast" to "Faction", "npc" to "Loot", "events" to "Daily", "education" to "Daily", "refills" to "Daily", "casino" to "Daily", "trains" to "Bars", "war" to "Faction", "networth" to "Money", "bounty" to "Money", "stocks" to "Money", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
     fun group(d: DashDef): String = if (d.button) "Shortcuts" else GROUP_OF[d.id] ?: "Status"
     const val ACTIONS_DEFAULT = "fly,gym,crimes,items"
     const val DASH_DEFAULT = "oc,energy,xanax,hospital,gym,fly,crimes,spin"
@@ -159,6 +162,66 @@ object Tiles {
                 }
                 else -> Tile("NPC ATTACK", "NONE", sub = n.s("reason")?.let { "$it · Loot Rangers" } ?: "none set · Loot Rangers", color = DIM)
             }
+        }
+        "events" -> {
+            val e = f.optJSONObject("more")?.optJSONObject("events"); val at = e?.optLong("latestT") ?: 0L
+            if (e == null) Tile("LAST EVENT", "—", sub = "no data yet", color = DIM)
+            else if (at <= 0) Tile("LAST EVENT", "NONE", sub = "no events", color = DIM)
+            else Tile("LAST EVENT", "${dur(now - at)} ago", sub = e.optString("latest").take(80) + e.optInt("n24").let { if (it > 0) " · $it in 24h" else "" }, color = AMBER)
+        }
+        "education" -> {
+            val d = f.optJSONObject("more")?.optJSONObject("edu"); val end = d?.l("endAt")
+            if (d == null) Tile("EDUCATION", "—", sub = "no data yet", color = DIM)
+            else if (end != null && end > now) Tile("EDUCATION ENDS IN", timerTo = end, sub = "course in progress", color = AMBER)
+            else Tile("EDUCATION", "NONE", sub = "not studying right now", color = DIM)
+        }
+        "refills" -> {
+            val r = f.optJSONObject("more")?.optJSONObject("refills")
+            if (r == null) Tile("FREE REFILLS", "—", sub = "no data yet", color = DIM)
+            else {
+                val names = listOf("energy" to "energy", "nerve" to "nerve", "token" to "tokens").filter { r.optBoolean(it.first) }.map { it.second }
+                val left = r.optLong("resetAt") - now
+                if (names.isEmpty()) Tile("FREE REFILLS", "ALL USED", sub = "reset in ${dur(left)}", color = DIM)
+                else Tile("FREE REFILLS", "${names.size} left", sub = names.joinToString(", ") + " · reset in ${dur(left)}", color = if (left < 10800) YELLOW else GO)
+            }
+        }
+        "casino" -> {
+            val c = f.optJSONObject("more")?.optJSONObject("casino")
+            if (c == null) Tile("CASINO TOKENS", "—", sub = "no data yet", color = DIM) else Tile("CASINO TOKENS", c.optInt("tokens").toString(), sub = "streak ${c.optInt("streak")}", color = AMBER)
+        }
+        "trains" -> {
+            val t = f.optJSONObject("more")?.optJSONObject("trains")
+            if (t == null) Tile("TRAINS", "—", sub = "gym not known yet", color = DIM) else Tile("TRAINS", t.optInt("n").toString(), sub = "${t.optString("gym")} · ${t.optInt("per")} energy each", color = if (t.optInt("n") > 0) GO else DIM)
+        }
+        "war" -> {
+            val w = f.optJSONObject("more")?.optJSONObject("war"); val us = w?.optJSONObject("us"); val them = w?.optJSONObject("them")
+            val vs = them?.optString("name")?.let { "vs $it" } ?: "ranked war"
+            when (w?.optString("state")) {
+                null -> Tile("RANKED WAR", "—", sub = "no data yet", color = DIM)
+                "upcoming" -> w.l("start").let { s -> if (s != null && s > now) Tile("WAR STARTS IN", timerTo = s, sub = vs, color = YELLOW) else Tile("RANKED WAR", "SOON", sub = vs, color = YELLOW) }
+                "active" -> {
+                    val mine = us?.optInt("score") ?: 0; val theirs = them?.optInt("score") ?: 0; val end = w.l("end")
+                    Tile("RANKED WAR", "$mine – $theirs", sub = vs + (end?.takeIf { it > now }?.let { " · ends in ${dur(it - now)}" } ?: ""), color = if (mine >= theirs) GO else STOP)
+                }
+                else -> Tile("RANKED WAR", "NONE", sub = "not in a war", color = DIM)
+            }
+        }
+        "networth" -> {
+            val n = f.optJSONObject("more")?.optJSONObject("nw")
+            if (n == null) Tile("NET WORTH", "—", sub = "no data yet", color = DIM)
+            else { val ch = n.optLong("change"); Tile("NET WORTH", money(n.optLong("total")), sub = (if (ch >= 0) "+" else "-") + money(Math.abs(ch)) + " today", color = if (ch >= 0) GO else STOP) }
+        }
+        "bounty" -> {
+            val b = f.optJSONObject("more")?.optJSONObject("bounty"); val best = b?.optJSONObject("best")
+            if (b == null) Tile("TOP BOUNTY", "—", sub = "no data yet", color = DIM)
+            else if (best == null) Tile("TOP BOUNTY", "NONE", sub = "none in your range", color = DIM)
+            else Tile("TOP BOUNTY", money(best.optLong("reward")), sub = "${best.optString("name")} · Lv ${best.optInt("level")} · ${b.optInt("count")} in range", color = AMBER)
+        }
+        "stocks" -> {
+            val s = f.optJSONObject("more")?.optJSONObject("stocks"); val dips = s?.optJSONArray("dips")
+            if (s == null) Tile("STOCK PORTFOLIO", "—", sub = "no holdings data yet", color = DIM)
+            else if (dips != null && dips.length() > 0) Tile("STOCK PORTFOLIO", money(s.optLong("value")), sub = "dipping: " + (0 until dips.length()).joinToString(", ") { dips.getString(it) }, color = YELLOW)
+            else Tile("STOCK PORTFOLIO", money(s.optLong("value")), sub = "${s.optInt("held")} holdings", color = PAPER)
         }
         "chainhits", "chainme" -> { // chainme is the old id, kept so a widget set to it keeps working
             val c = f.optJSONObject("chain"); val end = c?.l("endAt"); val cur = c?.optInt("current") ?: 0

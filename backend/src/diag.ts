@@ -44,3 +44,19 @@ export async function runProbe(key: string) {
     } catch (e: any) { console.log('PROBE', name, 'error', e?.code ?? '', String(e?.message ?? e).slice(0, 120)); }
   }));
 }
+
+// A second, smaller look: the calendar (API v2 only), how ranked wars appear while one runs, and where your faction id lives.
+const PROBES2: Record<string, string> = {
+  calendarV2: `${B}/v2/torn/calendar`,
+  rankedDesc: `${B}/v2/faction/rankedwars?limit=3&sort=desc`,
+  profileFaction: `${B}/user/?selections=profile`,
+};
+export async function runProbe2(key: string) {
+  await Promise.all(Object.entries(PROBES2).map(async ([name, url]) => {
+    try {
+      const j = await get(`${url}${url.includes('?') ? '&' : '?'}key=${key}&comment=Wingman`);
+      const small = name === 'profileFaction' ? { faction: (j as any).faction ? shapeOf((j as any).faction) : null, level: typeof (j as any).level } : j;
+      console.log('PROBE2', name, JSON.stringify(shapeOf(small)).slice(0, 1800));
+    } catch (e: any) { console.log('PROBE2', name, 'error', e?.code ?? '', String(e?.message ?? e).slice(0, 120)); }
+  }));
+}

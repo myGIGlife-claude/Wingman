@@ -55,6 +55,11 @@ class MainActivity : Activity() {
         AlertDef("medical_ready", "Medical cooldown over", "You can use a medical item again", "BARS AND COOLDOWNS", false),
         AlertDef("medical_low", "Medical cooldown under 6 hours", "Time to plan your next medical item", "BARS AND COOLDOWNS", false),
         AlertDef("booster_low", "Booster cooldown under 6 hours", "Time to plan your next booster", "BARS AND COOLDOWNS", false),
+        AlertDef("attacked_you", "Someone attacked you", "An attack, mug or hospitalizing against you shows in your events", "EVENTS AND DAILY", false),
+        AlertDef("new_event", "Other new events", "Trades, messages and other new events", "EVENTS AND DAILY", false),
+        AlertDef("education_done", "Education finished", "Your course is complete", "EVENTS AND DAILY", false),
+        AlertDef("refill_unused", "Free refill still unused", "3 hours before the daily reset, if one is left", "EVENTS AND DAILY", false),
+        AlertDef("stock_dip", "Stock dipping", "A stock you hold is well under its recent average", "MONEY", false),
     )
     private val alertState = mutableMapOf<String, Boolean>().also { m -> alertDefs.forEach { m[it.key] = it.on } }
     private var alertsBody: LinearLayout? = null
