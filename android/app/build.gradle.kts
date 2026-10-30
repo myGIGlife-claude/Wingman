@@ -19,8 +19,8 @@ android {
         applicationId = "com.wingman.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.20.1"
+        versionCode = 48
+        versionName = "1.20.2"
         // The server every install talks to, built in so players never type it. Override with -Pwingman.backend=... for your own backend.
         buildConfigField("String", "DEFAULT_BACKEND", "\"${(project.findProperty("wingman.backend") as String?) ?: "https://wingman-backend-6aw2bbejsa-ue.a.run.app"}\"")
     }

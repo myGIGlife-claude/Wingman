@@ -379,6 +379,32 @@ class WingmanWidget : AppWidgetProvider() {
         }
 
         // One item per widget, chosen when you add it. It fills the whole widget with large text.
+        // Where tapping a Single widget goes: the Torn page for what it shows. Null means just refresh.
+        fun singlePath(item: String, f: JSONObject): String? = when (item) {
+            "location", "trip", "stock", "buymax" -> if (f.optString("phase") == "abroad") "/index.php" else "/travelagency.php"
+            "energy", "trains" -> "/gym.php"
+            "nerve" -> "/loader.php?sid=crimes"
+            "life", "xanax", "drug", "booster", "medical", "addiction" -> "/item.php"
+            "hospital" -> "/hospitalview.php"
+            "jail" -> "/jailview.php"
+            "oc" -> "/factions.php?step=your#/tab=crimes"
+            "cash" -> "/bank.php"
+            "next" -> when (f.optString("next")) { "fly" -> "/travelagency.php"; "gym" -> "/gym.php"; "crimes" -> "/loader.php?sid=crimes"; else -> "/item.php" }
+            "targets" -> "/page.php?sid=list&type=targets"
+            "chain", "chainhits", "chainresp", "chainlast" -> "/factions.php?step=your#/tab=main"
+            "war" -> "/factions.php?step=your#/tab=wars"
+            "npc" -> f.optJSONObject("npc")?.optLong("targetId")?.takeIf { it > 0 }?.let { "/loader.php?sid=attack&user2ID=$it" } ?: "/page.php?sid=list&type=targets"
+            "events" -> "/events.php#/step=all"
+            "education" -> "/page.php?sid=education"
+            "refills" -> "/page.php?sid=points"
+            "casino" -> "/page.php?sid=spinTheWheel"
+            "calendar" -> "/calendar.php"
+            "bounty" -> "/bounties.php"
+            "stocks" -> "/page.php?sid=stocks"
+            "networth" -> "/index.php"
+            else -> null
+        }
+
         private fun buildSingle(c: Context, wid: Int): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.w_single)
             val item = Prefs.get(c, "single_$wid")
@@ -390,6 +416,8 @@ class WingmanWidget : AppWidgetProvider() {
             }
             if (item.isEmpty()) { text("WINGMAN", "TAP", "to choose what this widget shows", AMBER, pick); return v }
             if (f == null) { text(item.uppercase(), "…", "waiting for data. Tap to refresh.", DIM, refresh); return v }
+            // Tapping opens the Torn page for what is shown (refreshing happens on its own schedule).
+            val open = singlePath(item, f)?.let { Notifier.openIntent(c, "https://www.torn.com$it", 900 + wid, 0) } ?: refresh
             // Shortcut buttons: the whole widget is the button.
             val custom = try { org.json.JSONArray(Prefs.get(c, "custom")) } catch (e: Exception) { org.json.JSONArray() }
             val shortcut: Triple<String, String, String>? = when (item) {   // label, icon, path
@@ -416,7 +444,7 @@ class WingmanWidget : AppWidgetProvider() {
                 val cur = b.getInt("cur"); val max = b.getInt("max"); val pct = (cur * 100 / max).coerceIn(0, 100)
                 val k = when (item) { "life" -> if (pct > 70) "go" else if (pct > 35) "yellow" else "stop"; "energy" -> "amber"; else -> "yellow" }
                 val at = if (b.has("fullAt") && !b.isNull("fullAt")) b.getLong("fullAt") else 0L
-                text(item.uppercase(), "$cur/$max", if (cur >= max) "FULL" else if (at > now) "full at ${Tiles.clock(at)}" else "", rgb(k), refresh)
+                text(item.uppercase(), "$cur/$max", if (cur >= max) "FULL" else if (at > now) "full at ${Tiles.clock(at)}" else "", rgb(k), open)
                 v.setViewVisibility(R.id.ss_bars, View.VISIBLE)
                 listOf("go", "amber", "yellow", "stop").forEach { kk -> v.setViewVisibility(resBar(kk), if (kk == k) View.VISIBLE else View.GONE) }
                 v.setProgressBar(resBar(k), 100, pct, false)
@@ -429,7 +457,7 @@ class WingmanWidget : AppWidgetProvider() {
                 else -> Tiles.build(item, f, now)
             }
             if (tile == null) { text(item.uppercase(), "—", "nothing to show", DIM, refresh); return v }
-            text(tile.label, tile.text, tile.sub, tile.color, refresh)
+            text(tile.label, tile.text, tile.sub, tile.color, open)
             if (tile.timerTo != null && tile.timerTo > now) {
                 v.setViewVisibility(R.id.ss_value, View.GONE); v.setViewVisibility(R.id.ss_timer, View.VISIBLE)
                 v.setTextColor(R.id.ss_timer, tile.color); countdown(v, R.id.ss_timer, tile.timerTo - now)
