@@ -1,6 +1,6 @@
 import { get, isRateLimit } from './torn.ts';
-import { parseEvents, wasAttacked, parseEducation, parseRefills, parseCasino, secsToReset, trainsFor, parseWar, nextNetWorth, topBounty, parseHeld, parsePrices, dips, portfolioValue, type War } from './more.ts';
-import { sharedBounties, sharedGyms, sharedStocks, getStockHist } from './shared.ts';
+import { parseCalendar, parseEvents, wasAttacked, parseEducation, parseRefills, parseCasino, secsToReset, trainsFor, parseWar, nextNetWorth, topBounty, parseHeld, parsePrices, dips, portfolioValue, type War } from './more.ts';
+import { sharedCalendar, sharedBounties, sharedGyms, sharedStocks, getStockHist } from './shared.ts';
 import type { Evt } from './events.ts';
 
 // The newer tiles: events, education, refills, casino, trains, ranked war, net worth, bounties, stocks.
@@ -18,6 +18,7 @@ export interface More {
   nw?: { total: number; change: number } | null;
   bounty?: { best: { name: string; level: number; reward: number; id: number } | null; count: number } | null;
   stocks?: { value: number; held: number; dips: string[] } | null;
+  calendar?: { name: string; state: 'now' | 'next'; start: number; end: number | null } | null;
 }
 
 export async function refreshMore(key: string, st: any, t: number, user: any, energyNow: number | null): Promise<{ more: More; events: Evt[] }> {
@@ -96,6 +97,9 @@ export async function refreshMore(key: string, st: any, t: number, user: any, en
     m.stocks = { value: portfolioValue(p, s.held), held: Object.keys(s.held).length, dips: found.map(d => d.acr) };
     for (const d of found) out.push({ key: `dip:${d.id}:${day(t)}`, type: 'stock_dip', text: `${d.acr} is ${Math.round((1 - d.price / d.avg) * 100)}% under its recent average`, url: 'https://www.torn.com/page.php?sid=stocks' });
   } else m.stocks = null;
+
+  const cal = await sharedCalendar(t);
+  m.calendar = cal ? parseCalendar(cal, t) : null;
 
   return { more: m, events: out };
 }

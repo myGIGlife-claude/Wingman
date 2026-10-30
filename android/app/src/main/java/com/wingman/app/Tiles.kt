@@ -32,7 +32,7 @@ object Tiles {
         DashDef("oc", "OC countdown", false), DashDef("location", "Location: in Torn, abroad or flying, with ETA", false), DashDef("energy", "Energy bar", false), DashDef("nerve", "Nerve bar", false), DashDef("life", "Health bar", false),
         DashDef("xanax", "Xanax: cooldown, addiction, counts", false), DashDef("addiction", "Addiction watch: penalty and rehabs", false), DashDef("booster", "Booster cooldown", false), DashDef("medical", "Medical cooldown", false),
         DashDef("chain", "Chain watch: count and time left", false), DashDef("chainhits", "My hits in the running chain", false), DashDef("chainresp", "My respect in the running chain", false), DashDef("chainlast", "Your rank in the last chain", false), DashDef("npc", "NPC attack time (Loot Rangers)", false),
-        DashDef("events", "Last event: attacks, trades, messages", false), DashDef("education", "Education: time left", false), DashDef("refills", "Free refills left", false), DashDef("casino", "Casino tokens and streak", false),
+        DashDef("events", "Last event: attacks, trades, messages", false), DashDef("education", "Education: time left", false), DashDef("refills", "Free refills left", false), DashDef("casino", "Casino tokens and streak", false), DashDef("calendar", "Torn event: on now or next", false),
         DashDef("trains", "Trains your energy buys", false), DashDef("war", "Ranked war: score and time", false),
         DashDef("networth", "Net worth and change today", false), DashDef("bounty", "Top bounty in your range", false), DashDef("stocks", "Stock portfolio and dips", false), DashDef("cash", "Cash", false), DashDef("hospital", "Hospital status", false), DashDef("jail", "Jail status", false),
         DashDef("gym", "Gym button", true), DashDef("fly", "Fly button (locks near your OC)", true), DashDef("crimes", "Crimes button", true),
@@ -43,7 +43,7 @@ object Tiles {
     val GROUPS = listOf("Travel", "Bars", "Cooldowns", "OC", "Faction", "Loot", "Daily", "Money", "Status", "Shortcuts")
     private val GROUP_OF = mapOf("location" to "Travel", "energy" to "Bars", "nerve" to "Bars", "life" to "Bars",
         "xanax" to "Cooldowns", "addiction" to "Cooldowns", "booster" to "Cooldowns", "medical" to "Cooldowns",
-        "oc" to "OC", "chain" to "Faction", "chainhits" to "Faction", "chainresp" to "Faction", "chainlast" to "Faction", "npc" to "Loot", "events" to "Daily", "education" to "Daily", "refills" to "Daily", "casino" to "Daily", "trains" to "Bars", "war" to "Faction", "networth" to "Money", "bounty" to "Money", "stocks" to "Money", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
+        "oc" to "OC", "chain" to "Faction", "chainhits" to "Faction", "chainresp" to "Faction", "chainlast" to "Faction", "npc" to "Loot", "events" to "Daily", "education" to "Daily", "refills" to "Daily", "casino" to "Daily", "calendar" to "Daily", "trains" to "Bars", "war" to "Faction", "networth" to "Money", "bounty" to "Money", "stocks" to "Money", "hospital" to "Status", "jail" to "Status", "cash" to "Status")
     fun group(d: DashDef): String = if (d.button) "Shortcuts" else GROUP_OF[d.id] ?: "Status"
     const val ACTIONS_DEFAULT = "fly,gym,crimes,items"
     const val DASH_DEFAULT = "oc,energy,xanax,hospital,gym,fly,crimes,spin"
@@ -161,6 +161,14 @@ object Tiles {
                     else Tile("NPC ATTACK", "SOON", sub = "via Loot Rangers", color = AMBER)
                 }
                 else -> Tile("NPC ATTACK", "NONE", sub = n.s("reason")?.let { "$it · Loot Rangers" } ?: "none set · Loot Rangers", color = DIM)
+            }
+        }
+        "calendar" -> {
+            val c = f.optJSONObject("more")?.optJSONObject("calendar")
+            when (c?.optString("state")) {
+                null -> Tile("TORN EVENT", "NONE", sub = "nothing scheduled", color = DIM)
+                "now" -> c.l("end").let { e -> if (e != null && e > now) Tile("EVENT ENDS IN", timerTo = e, sub = c.optString("name"), color = GO) else Tile("EVENT ON NOW", "NOW", sub = c.optString("name"), color = GO) }
+                else -> c.l("start").let { s -> if (s != null && s > now) Tile("NEXT EVENT IN", timerTo = s, sub = c.optString("name"), color = AMBER) else Tile("NEXT EVENT", "SOON", sub = c.optString("name"), color = AMBER) }
             }
         }
         "events" -> {

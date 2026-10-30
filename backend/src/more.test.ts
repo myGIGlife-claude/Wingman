@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseEvents, wasAttacked, parseEducation, parseRefills, parseCasino, secsToReset, trainsFor, parseWar, nextNetWorth, topBounty, parseHeld, parsePrices, dips, portfolioValue } from './more.ts';
+import { parseEvents, wasAttacked, parseEducation, parseRefills, parseCasino, secsToReset, trainsFor, parseWar, parseCalendar, nextNetWorth, topBounty, parseHeld, parsePrices, dips, portfolioValue } from './more.ts';
 
 test('events: newest first, markup stripped, attacks recognized', () => {
   const ev = parseEvents({ events: { a: { timestamp: 100, event: '<a href="x">Bob</a> attacked you and lost' }, b: { timestamp: 200, event: 'You received &amp; sent a trade' } } });
@@ -65,4 +65,12 @@ test('stocks: holdings, portfolio value and dips need enough history', () => {
   const hist = { 3: Array.from({ length: 12 }, (_, i) => [i, 100] as [number, number]), 7: [[1, 10] as [number, number]] };
   assert.deepEqual(dips(hist, prices, held).map(d => d.acr), ['XX']);   // 90 is 10% under the 100 average
   assert.deepEqual(dips({ 3: hist[3].slice(0, 5) }, prices, held), []);  // not enough history yet
+});
+
+test('calendar: what is on now first, otherwise the next event', () => {
+  const j = { calendar: { competitions: [{ title: 'Big Contest', start: 100, end: 900 }], events: [{ title: 'Later Fest', start: 5000, end: 6000 }, { title: 'Soon Fest', start: 2000, end: 3000 }, { title: 'Old', start: 1, end: 50 }] } };
+  assert.deepEqual(parseCalendar(j, 500), { name: 'Big Contest', state: 'now', start: 100, end: 900 });
+  assert.deepEqual(parseCalendar(j, 1000), { name: 'Soon Fest', state: 'next', start: 2000, end: 3000 });
+  assert.equal(parseCalendar(j, 9999), null);
+  assert.equal(parseCalendar({}, 1), null);
 });

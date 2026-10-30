@@ -115,6 +115,8 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
   st.yata = await timed('yata', sharedYata(t));
   const hist = await timed('hist', sharedHist());
   const npc = await timed('loot', sharedLoot(t));
+  // The newer tiles run alongside the targets, FF Scouter and chain calls below; they only touch st.more.
+  const morePromise = timed('more', refreshMore(key, st, t, user, typeof user.energy?.current === 'number' ? user.energy.current : null)).catch(() => ({ more: {}, events: [] as Evt[] }));
 
   // In-game Targets list, refreshed every 2 minutes (1 to 3 API calls).
   if (!st.targets || t - st.targets.at >= 120) {
@@ -185,7 +187,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
   }
   const chain = st.chain?.current > 0 && st.chain.endAt ? { current: st.chain.current, left: st.chain.endAt - t } : null;
   // The newer tiles (events, education, refills, casino, trains, war, net worth, bounties, stocks).
-  const moreRes = await timed('more', refreshMore(key, st, t, user, typeof user.energy?.current === 'number' ? user.energy.current : null)).catch(() => ({ more: {}, events: [] as Evt[] }));
+  const moreRes = await morePromise;
   st.moreView = moreRes.more; // what /state serves between ticks
   const events: Evt[] = [...diffEvents(prev, p, cfg, bought), ...statusEvents(st.flags, flags, t), ...addictionEvents, ...abroadLongEvents(p, st.arrival, t), ...awardEvents(awardBefore, st.awards ?? { medals: null, honors: null }), ...chainEvents(chain, t), ...npcEvents(st.npcState, npc, t), ...moreRes.events].filter(e => alertOn(cfg, e.type) && !sent[e.key]);
 

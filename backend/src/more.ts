@@ -78,3 +78,14 @@ export function dips(hist: Record<string, [number, number][]>, prices: Record<st
   return out;
 }
 export const portfolioValue = (prices: Record<string, { price: number }>, held: Record<string, number>) => Object.entries(held).reduce((a, [id, n]) => a + (prices[id]?.price ?? 0) * n, 0);
+
+// ---- Calendar: what is on now, or the next thing coming ----
+export interface CalEvent { name: string; state: 'now' | 'next'; start: number; end: number | null }
+export function parseCalendar(j: any, now: number): CalEvent | null {
+  const all: any[] = [...(Array.isArray(j?.calendar?.competitions) ? j.calendar.competitions : []), ...(Array.isArray(j?.calendar?.events) ? j.calendar.events : [])]
+    .map(e => ({ name: String(e?.title ?? ''), start: num(e?.start), end: num(e?.end) })).filter(e => e.name && e.start !== null) as any[];
+  const live = all.filter(e => e.start <= now && (e.end === null || e.end === 0 || e.end > now)).sort((a, b) => (a.end || Infinity) - (b.end || Infinity))[0];
+  if (live) return { name: live.name, state: 'now', start: live.start, end: live.end && live.end > 0 ? live.end : null };
+  const next = all.filter(e => e.start > now).sort((a, b) => a.start - b.start)[0];
+  return next ? { name: next.name, state: 'next', start: next.start, end: next.end && next.end > 0 ? next.end : null } : null;
+}

@@ -84,6 +84,7 @@ function sharedCache<T>(ttl: number, load: () => Promise<T>) {
 }
 const API = 'https://api.torn.com';
 export const sharedGyms = sharedCache(86400, () => get(`${API}/torn/?selections=gyms&comment=Wingman&key=${process.env.TORN_API_KEY}`));
+export const sharedCalendar = sharedCache(21600, () => get(`${API}/v2/torn/calendar?comment=Wingman&key=${process.env.TORN_API_KEY}`));
 export const sharedBounties = sharedCache(300, () => get(`${API}/v2/torn/bounties?limit=100&comment=Wingman&key=${process.env.TORN_API_KEY}`));
 
 // Stock prices every 30 minutes, with a week of history kept in the database for the dip alert.
