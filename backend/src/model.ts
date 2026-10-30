@@ -72,7 +72,8 @@ export function factsOf(p: any, cfg: Cfg, user: any, bought: boolean, rs?: Eta, 
     restock: rs ? { eta: rs.eta, overdue: rs.overdue, everySecs: rs.every, samples: rs.samples, soldOutAt: rs.soldOutAt } : null,
     buyMax: abroad ? p.buyMax?.n ?? null : null, buyWhy: abroad ? p.buyMax?.why ?? null : null,
     next: p.next?.id ?? null, bought, fits: p.phase === 'home' ? !!p.fits : null,
-    chain: extra?.chain ? { current: extra.chain.current, max: extra.chain.max, endAt: extra.chain.endAt, noAccess: extra.chain.noAccess, myHits: extra.chain.myHits, myRespect: extra.chain.myRespect, last: extra.chain.last } : null, // bookkeeping fields stay out so the widget is not re-sent for them npc: extra?.npc ?? null, more: extra?.more ?? null,
+    // Only the displayed chain fields: bookkeeping stays out so the widget is not re-sent for it.
+    chain: extra?.chain ? { current: extra.chain.current, max: extra.chain.max, endAt: extra.chain.endAt, noAccess: extra.chain.noAccess, myHits: extra.chain.myHits, myRespect: extra.chain.myRespect, last: extra.chain.last } : null, npc: extra?.npc ?? null, more: extra?.more ?? null,
   };
 }
 
