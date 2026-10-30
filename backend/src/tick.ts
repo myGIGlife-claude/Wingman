@@ -1,5 +1,5 @@
 import { computePlan, learnFlight, DESTS } from './plan.ts';
-import { fetchChainReport, fetchLastChain, fetchAttacks, fetchAwards, fetchChain, fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
+import { fetchChainReport, fetchLastChain, fetchAttacks, isTransient, fetchAwards, fetchChain, fetchUser, fetchOC, fetchTargets, fetchProfile, fetchBattleStats, fetchDrugStats, addictionFrom, addictionIcon, rehabCount, fetchIcons, drugCounts, isKeyProblem, isRateLimit } from './torn.ts';
 import { compact, pickTargets, type TargetsView } from './targets.ts';
 import { fetchFFTargets, FFError } from './ff.ts';
 import { findStock } from './yata.ts';
@@ -97,6 +97,7 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
     [user, oc] = await timed('torn_user_oc', Promise.all([fetchUser(key), fetchOC(key)]));
   } catch (e: any) {
     if (isRateLimit(e)) { await saveState(uid, { ...st, backoffUntil: wall + 120 }); return { ok: false, note: 'rate limited' }; }
+    if (isTransient(e)) return { ok: false, note: 'torn unavailable' }; // Torn had a bad moment; the next tick tries again
     if (isKeyProblem(e)) {
       const k = `key:${Math.floor(wall / 86400)}`;
       if (!st.sent?.[k]) {
@@ -165,13 +166,14 @@ async function tickInner({ uid, key, ffKey }: Ctx, timed: <T>(name: string, p: P
   // Chain watch: polled every tick while a chain runs and every 5 minutes otherwise. A key without faction access is not asked again for an hour.
   if (!(st.chainOffUntil > t) && (!st.chain || t - st.chain.at >= (st.chain.current > 0 ? 30 : 300))) {
     try {
-      const c = await timed('chain', fetchChain(key, t));
+      const c = await timed('chain', fetchChain(key, t)), old = st.chain;
       st.chain = { at: t, current: c?.current ?? 0, max: c?.max ?? 0, endAt: c ? Math.round((t + c.left) / 5) * 5 : null }; // rounded so the widget is not re-sent for a second of drift
-      // While a chain runs, count your own hits and respect in it (one more call per refresh).
+      // While a chain runs, count your own hits and respect in it. That costs a call, so it is redone once a minute and carried over in between.
       if (c && c.start > 0) {
-        try { const h = chainHits(await timed('chain_hits', fetchAttacks(key)), Number(user.player_id), c.start); st.chain.myHits = h.hits; st.chain.myRespect = h.respect; } catch { /* no hit count this round */ }
+        if (old?.hitsAt && t - old.hitsAt < 60 && old.start === c.start) { st.chain.myHits = old.myHits; st.chain.myRespect = old.myRespect; st.chain.hitsAt = old.hitsAt; st.chain.start = old.start; }
+        else { try { const h = chainHits(await timed('chain_hits', fetchAttacks(key)), Number(user.player_id), c.start); st.chain.myHits = h.hits; st.chain.myRespect = h.respect; st.chain.hitsAt = t; st.chain.start = c.start; } catch { /* no hit count this round */ } }
       }
-    } catch (e: any) { if (!isRateLimit(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } }
+    } catch (e: any) { if (!isTransient(e)) { st.chainOffUntil = t + 3600; st.chain = { at: t, current: 0, max: 0, endAt: null, noAccess: true }; } } // a Torn hiccup must not switch chain tracking off
   }
   // After a chain ends: your rank in the faction's chain report. Checked every 10 minutes while no chain runs; only a new chain id costs a report call.
   if (!(st.chainOffUntil > t) && !(st.chain?.current > 0) && t - (st.chainRep?.checkedAt ?? 0) >= 600) {

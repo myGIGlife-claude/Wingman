@@ -1,4 +1,4 @@
-import { get, isRateLimit } from './torn.ts';
+import { get, isTransient } from './torn.ts';
 import { parseCalendar, parseEvents, wasAttacked, parseEducation, parseRefills, parseCasino, secsToReset, trainsFor, parseWar, nextNetWorth, topBounty, parseHeld, parsePrices, dips, portfolioValue, type War } from './more.ts';
 import { sharedCalendar, sharedBounties, sharedGyms, sharedStocks, getStockHist } from './shared.ts';
 import type { Evt } from './events.ts';
@@ -29,7 +29,7 @@ export async function refreshMore(key: string, st: any, t: number, user: any, en
   const call = async <T>(name: string, every: number, fn: () => Promise<T>): Promise<T | undefined> => {
     if (!due(name, every)) return undefined;
     s.at[name] = t;
-    try { return await fn(); } catch (e: any) { if (!isRateLimit(e)) s.off[name] = t + 3600; return undefined; }
+    try { return await fn(); } catch (e: any) { if (!isTransient(e)) s.off[name] = t + 3600; return undefined; }
   };
   const q = (path: string) => get(`${API}${path}${path.includes('?') ? '&' : '?'}key=${key}&comment=Wingman`);
 

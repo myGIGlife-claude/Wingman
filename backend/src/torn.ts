@@ -5,6 +5,8 @@ export class TornError extends Error {
 }
 export const isKeyProblem = (e: unknown) => e instanceof TornError && [2, 10, 13].includes(e.code);
 export const isRateLimit = (e: unknown) => e instanceof TornError && e.code === 5;
+// Torn having a bad moment (rate limit, API down, "backend error, try again", daily limit) or the network failing: retry later, do not switch a feature off.
+export const isTransient = (e: unknown) => !(e instanceof TornError) || [5, 8, 9, 14, 17].includes(e.code);
 
 export async function get(url: string) {
   const r = await fetch(url, { signal: AbortSignal.timeout(10_000) });
